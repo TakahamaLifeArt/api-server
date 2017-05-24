@@ -1,0 +1,678 @@
+<?php
+/**
+*	Takahama Life Art
+*	master data API
+*	charset utf-8
+*/
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/mail/conndb.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/calc.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/master.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/review.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/sweatjack.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/members.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/orders.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/marketing.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/JSON.php';
+
+if(isset($_REQUEST['act'])){
+	$mst = new Master();
+	switch($_REQUEST['act']){
+	case 'category':
+		$dat=$mst->getCategory();
+		break;
+		
+	case 'item':
+		if(isset($_REQUEST['categoryid'])) $dat=$mst->getItem($_REQUEST['categoryid'], $_REQUEST['curdate'], $_REQUEST['mode'] , $_REQUEST['show_site']);
+		break;
+		
+	case 'size':
+		if(isset($_REQUEST['itemid'])) $dat=$mst->getSize($_REQUEST['itemid'], $_REQUEST['colorcode'], $_REQUEST['curdate'], $_REQUEST['mode'], $_REQUEST['show_site'] );
+		break;
+		
+	case 'color':
+		if(isset($_REQUEST['itemid'])) $dat=$mst->getItemcolor($_REQUEST['itemid'], $_REQUEST['curdate'], $_REQUEST['mode'], $_REQUEST['show_site']);
+		break;
+		
+	case 'price':
+		if(isset($_REQUEST['itemid'])) $dat=$mst->getItemprice($_REQUEST['itemid'], $_REQUEST['curdate'], $_REQUEST['mode'], $_REQUEST['amount'], $_REQUEST['show_site']);
+		break;
+		
+	case 'position':
+		$dat=$mst->getPrintposition($_REQUEST['itemid'], $_REQUEST['curdate'], $_REQUEST['mode']);
+		break;
+		
+	case 'printfee':
+		$sheetsize = '1';
+		if(isset($_REQUEST['sheetsize'])){
+			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
+				$sheetsize = $_REQUEST['sheetsize'];
+			}
+		}
+		if (!isset($_REQUEST['curdate'])) {
+			$curdate = date('Y-m-d');
+		} else {
+			$curdate = $_REQUEST['curdate'];
+		}
+		
+		$calc = new Calc($sheetsize);
+		
+		// 2017-05-24 14:00:00 から仕様変更
+		$isSpecVer2 = false;
+		
+		/*
+		if (strtotime('2017-05-24 14:00:00') <= time()) {
+			$isSpecVer2 = true;
+		} else {
+			$isSpecVer2 = false;
+		}
+		*/
+
+		// インクジェット可能なアイテムIDを取得
+		$ids = $mst->itemIdOf(85, NULL, "tag");
+		
+		if(isset($_REQUEST['itemid'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
+			for($i=0; $i<count($_REQUEST['amount']); $i++){
+				$isInkjet = in_array($_REQUEST['itemid'][$i], $ids);
+				if(isset($_REQUEST['color'])){
+					$inkjetOption = $_REQUEST['color'][$i]!='ホワイト'? 1: 0;
+				}else{
+					$inkjetOption = 0;
+				}
+				$args[$i] = array(
+								'itemid'=>$_REQUEST['itemid'][$i],
+								'amount'=>$_REQUEST['amount'][$i],
+								'ink'=>$_REQUEST['ink'][$i],
+								'pos'=>$_REQUEST['pos'][$i],
+								'inkjet'=>$isInkjet,
+								'option'=>array($inkjetOption=>$_REQUEST['amount'][$i]),
+								);
+			}
+			if ($isSpecVer2) {
+				$dat=$calc->printfee2($args);
+			} else {
+				$dat=$calc->printfee($args);
+			}
+		}else if(isset($_REQUEST['args'])){
+			for($i=0; $i<count($_REQUEST['args']); $i++){
+				$_REQUEST['args'][$i]['inkjet'] = in_array($_REQUEST['args'][$i]['itemid'], $ids);
+				if(! array_key_exists('option', $_REQUEST['args'][$i])){
+					$_REQUEST['args'][$i]['option'] = array($_REQUEST['args'][$i]['amount']);
+				}
+			}
+			if ($isSpecVer2) {
+				$dat=$calc->printfee2($_REQUEST['args']);
+			} else {
+				$dat=$calc->printfee($_REQUEST['args']);
+			}
+		}else{
+			$dat = array('printfee'=>'0');
+		}
+		
+		break;
+		
+		
+/*----- end public API -----*/
+
+
+	case 'itemid':
+		$dat=$mst->getItemID($_REQUEST['itemcode']);
+		break;
+		
+	case 'itemattr':
+		if(isset($_REQUEST['itemid'])) $dat=$mst->getItemAttr($_REQUEST['itemid']);
+		break;
+		
+	case 'itemof':
+		$dat=$mst->itemOf($_REQUEST['id'], $_REQUEST['tag'], $_REQUEST['mode'], $_REQUEST['limit']);
+		break;
+		
+	case 'itemidof':
+		$dat=$mst->itemIdOf($_REQUEST['id'], $_REQUEST['tag'], $_REQUEST['mode'], $_REQUEST['target'], $_REQUEST['limit'], $_REQUEST['curdate']);
+		break;
+		
+	case 'taginfo':
+		$dat=$mst->getTagInfo($_REQUEST['id']);
+		break;
+		
+	case 'categories':
+		if(isset($_REQUEST['id'])) $dat=$mst->getCategories($_REQUEST['id'], $_REQUEST['curdate'], $_REQUEST['mode'], $_REQUEST['show_site']);
+		break;
+		
+	case 'itempageinfo':
+		if(isset($_REQUEST['id'])) $dat=$mst->getItemPageInfo($_REQUEST['id'], $_REQUEST['curdate'], $_REQUEST['mode']);
+		break;
+		
+	case 'itemstock':
+		if(isset($_REQUEST['masterid'], $_REQUEST['sizeid'])) $dat=$mst->getItemStock($_REQUEST['masterid'], $_REQUEST['sizeid']);
+		break;
+		
+	case 'sizeprice':
+		if(isset($_REQUEST['itemid'], $_REQUEST['colorcode'])) $dat=$mst->getSizePrice($_REQUEST['itemid'], $_REQUEST['colorcode']);
+		break;
+		
+	case 'estimateeach':
+		$sheetsize = '1';
+		if(isset($_REQUEST['sheetsize'])){
+			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
+				$sheetsize = $_REQUEST['sheetsize'];
+			}
+		}
+		$calc = new Calc($sheetsize);
+		if(isset($_REQUEST['itemcode'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
+			for($i=0; $i<count($_REQUEST['amount']); $i++){
+				$args[$i] = array('itemcode'=>$_REQUEST['itemcode'][$i],'amount'=>$_REQUEST['amount'][$i],'ink'=>$_REQUEST['ink'][$i],'pos'=>$_REQUEST['pos'][$i]);
+			}
+			$dat=$calc->estimateEach($args);
+		}else{
+			$dat = array('0');
+		}
+		break;
+		
+	case 'printfeelist':
+		$sheetsize = '1';
+		if(isset($_REQUEST['sheetsize'])){
+			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
+				$sheetsize = $_REQUEST['sheetsize'];
+			}
+		}
+		$calc = new Calc($sheetsize);
+		
+		// インクジェット可能なアイテムIDを取得
+		$ids = $mst->itemIdOf(85, NULL, "tag");
+		if(isset($_REQUEST['itemid'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
+			for($i=0; $i<count($_REQUEST['amount']); $i++){
+				$isInkjet = in_array($_REQUEST['itemid'][$i], $ids);
+				if(isset($_REQUEST['option'])){
+					$inkjetOption = array($_REQUEST['option'][$i]=>$_REQUEST['amount'][$i]);
+				}else{
+					$inkjetOption = array($_REQUEST['amount'][$i]);
+				}
+				$args[$_REQUEST['itemid'][$i]][] = array('itemid'=>$_REQUEST['itemid'][$i],
+														 'amount'=>$_REQUEST['amount'][$i],
+														 'ink'=>$_REQUEST['ink'][$i],
+														 'pos'=>$_REQUEST['pos'][$i],
+														 'inkjet'=>$isInkjet,
+														 'option'=>$inkjetOption
+														 );
+			}
+			foreach($args as $itemid=>$val){
+				$res = $calc->printfee($val);
+				$res['itemid'] = $itemid;
+				$dat[] = $res;
+			}
+		}else{
+			$dat = array('printfee'=>'0');
+		}
+		break;
+		
+	case 'silkprintfee':
+		$sheetsize = '1';
+		$calc = new Calc($sheetsize);
+		if(isset($_REQUEST['args'])){
+			for($i=0; $i<count($_REQUEST['args']); $i++){
+				$a = $_REQUEST['args'][$i];
+				$r = $calc->calcSilkPrintFee($a['amount'], $a['area'], $a['ink'], $a['item_id'], $a['ratio'], $a['size'], $a['extra'], $a['repeat']);
+				$dat += $r['tot'];
+			}
+		}
+		break;
+		
+	case 'exwmail':
+		require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/mail/exwmail.php';
+		if(isset($_REQUEST['args'])){
+			$exw = new Exwmail();
+			$result = $exw->getExwOrder($_REQUEST['args']);
+			if(empty($result)){
+				$dat = 4;
+			}else{
+				$exw->send($result);
+				$dat = 2;
+			}
+		}
+		break;
+		
+	case 'holidayinfo':
+	/**
+	 * 協業期間、休業のお知らせ、臨時お知らせの設定と取得
+	 */
+		if(isset($_REQUEST['mode'])){
+			$json = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
+			$filename = $_SERVER['DOCUMENT_ROOT'].'/const/config_holiday.php';
+			$fp = fopen($filename, 'r+b');
+			if($fp===false) return;
+			// フィルタの登録
+			stream_filter_register('crlf', 'crlf_filter');
+			// 出力ファイルへフィルタをアタァッチ
+			stream_filter_append($fp, 'crlf');
+			while (!feof($fp)) {
+				$contents .= fread($fp, 8192);
+			}
+			fclose($fp);
+			$info = $json->decode($contents);
+			$tmp = array();
+			if($_REQUEST['mode']=='w'){
+				foreach ($_REQUEST as $key => $val) {
+					switch($key){
+						case 'start':
+						case 'end':					
+							$info[$key] = $mst->validdate($val);
+							break;
+						case 'notice':
+						case 'notice-ext':
+							$info[$key] = $val;
+							break;
+						case 'state':
+						case 'state-ext':
+							if($_REQUEST['site']==1 || $_REQUEST['site']==5 || $_REQUEST['site']==6){
+								if(empty($val)){
+									$tmp[$key] = "0";
+								}else{
+									$tmp[$key] = "1";
+								}
+							}
+							break;
+					}
+				}
+				if(! empty($tmp)){
+					$info['site'][$_REQUEST['site']] = $tmp;
+				}
+				$info = $json->encode($info);
+				$fp = fopen($filename, 'wb');
+				$dat = fwrite($fp, $info);
+				fclose($fp);
+			}else if($_REQUEST['mode']=='r'){
+				$dat['start'] = $info['start'];
+				$dat['end'] = $info['end'];
+				if(isset($_REQUEST['site'])){
+//					if(empty($info['site'][$_REQUEST['site']]['state'])){
+					if(($info['site'][$_REQUEST['site']]['state']) == 0){
+						$dat['notice'] = "";
+					}else{
+						$dat['notice'] = $info['notice'];
+					}
+//					if(empty($info['site'][$_REQUEST['site']]['state-ext'])){
+					if(($info['site'][$_REQUEST['site']]['state-ext'])== 0){
+						$dat['notice-ext'] = "";
+					}else{
+						$dat['notice-ext'] = $info['notice-ext'];
+					}
+				}else if(isset($_REQUEST['notice'])){
+					$dat['notice'] = $info['notice'];
+					$dat['notice-ext'] = $info['notice-ext'];
+				}else {
+					$info['notice'] = mb_convert_encoding($info['notice'],'euc-jp','utf-8');
+					$info['notice-ext'] = mb_convert_encoding($info['notice-ext'],'euc-jp','utf-8');
+					$dat = $info;
+				}
+			}
+		}
+		break;
+
+
+
+/*----- Marketing -----*/
+	
+	case 'orderlist':
+		$dat=Marketing::getOrderList($_REQUEST['start'], $_REQUEST['end'], $_REQUEST['id']);
+		break;
+			
+	case 'printlist':
+		$dat=Marketing::getPrintList($_REQUEST['start'], $_REQUEST['end'], $_REQUEST['id']);
+		break;
+			
+	case 'orderitemlist':
+		$dat=Marketing::getOrderItemList($_REQUEST['start'], $_REQUEST['end'], $_REQUEST['id'], $_REQUEST['mode']);
+		break;
+	
+	case 'customerlist':
+		$dat=Marketing::getCustomerList($_REQUEST['start'], $_REQUEST['end'], $_REQUEST['id']);
+		break;
+	
+	
+/*----- common (428HP, print-t, sweatjack) -----*/
+		
+	case 'requestmail':
+		if(isset($_REQUEST['args'])) $dat=$mst->setRequestMail($_REQUEST['args']);
+		break;
+		
+	case 'salestax':
+		if(isset($_REQUEST['curdate'])) $dat=$mst->getSalesTax($_REQUEST['curdate'],$_REQUEST['ordertype']);
+		break;
+		
+	case 'acceptingorder':
+		$odr = new Orders();
+		if(isset($_REQUEST['args'])) $dat=$odr->db("insert", "order", $_REQUEST['args']);
+		break;
+		
+		
+/*----- for 428HP -----*/
+		
+	case 'enquete':
+		if(isset($_REQUEST['args'])) $dat=$mst->setEnquete($_REQUEST['args']);
+		break;
+		
+	case 'getuserlist':
+		$dat=$mst->getUserList($_REQUEST['args']);
+		break;
+		
+	case 'getdeliverylist':
+		$dat=$mst->getDeliveryList($_REQUEST['args']);
+		break;
+		
+	case 'checkexistemail':
+		if(isset($_REQUEST['args'])) $dat=$mst->checkExistEmail($_REQUEST['args']);
+		if(isset($_REQUEST['email']) && isset($_REQUEST['reg_site'])) $dat=$mst->checkExistEmail2($_REQUEST['email'],$_REQUEST['reg_site']);
+		break;
+		
+	case 'unsubscribe':
+		if(isset($_REQUEST['args'])) $dat=$mst->unsubscribe($_REQUEST['args']);
+		break;
+		
+	case 'userreview':
+		$rev = new Review();
+		if(isset($_REQUEST['args'])) $dat=$rev->getUserReview($_REQUEST['args']);
+		break;
+		
+	case 'itemreview':
+		$rev = new Review();
+		if(isset($_REQUEST['args'])) $dat=$rev->getItemReview($_REQUEST['args']);
+		break;
+		
+	case 'modelphoto':
+		if(isset($_REQUEST['categorykey'], $_REQUEST['itemcode'])){
+			$dat = array();
+			foreach (glob($_SERVER['DOCUMENT_ROOT']."/weblib/img/items/".$_REQUEST['categorykey']."/model/".$_REQUEST['itemcode']."/*") as $filepath) {
+				$dat[] = basename($filepath);
+			}
+		}
+		break;
+		
+	case 'stylephoto':
+		if(isset($_REQUEST['categorykey'], $_REQUEST['itemcode'])){
+			$dat = array();
+			foreach (glob($_SERVER['DOCUMENT_ROOT']."/weblib/img/items/".$_REQUEST['categorykey']."/".$_REQUEST['itemcode']."/".$_REQUEST['itemcode']."_style_*.jpg") as $filepath) {
+				$dat[] = basename($filepath);
+			}
+		}
+		break;
+		
+	case 'itemdetail':
+		if(isset($_REQUEST['args'])) $dat=$mst->getItemDetail($_REQUEST['args'], $_REQUEST['mode']);
+		break;
+		
+	case 'itemmeasure':
+		if(isset($_REQUEST['args'])) $dat=$mst->getItemMeasure($_REQUEST['args']);
+		break;
+		
+/*----- for Sweatjack -----*/
+		
+	case 'sjTable':
+		$sj = new Sweatjack();
+		if(isset($_REQUEST['mode'])){
+			$dat = $sj->getTablelist($_REQUEST['mode'], $_REQUEST['item_id'], $_REQUEST['itemcolor_code'], $_REQUEST['part']);
+		}
+		break;
+		
+	case 'sjItemPrice':
+		$sj = new Sweatjack();
+		if(isset($_REQUEST['item_id'],$_REQUEST['size_id'],$_REQUEST['points'])){
+			$dat = $sj->getItemPrice($_REQUEST['item_id'],$_REQUEST['size_id'],$_REQUEST['points'], $_REQUEST['isWhite'], $_REQUEST['mode']);
+		}
+		break;
+		
+	case 'sjItemSize':
+		$sj = new Sweatjack();
+		if(isset($_REQUEST['id'])){
+			$mode = isset($_REQUEST['mode'])? $_REQUEST['mode']: 'id';
+			$dat = $sj->getSize($_REQUEST['id'], $_REQUEST['color'], $mode);
+		}
+		break;
+		
+	case 'sjItemInfo':
+		$sj = new Sweatjack();
+		$dat = $sj->getItemInfo($_REQUEST['part'], $_REQUEST['keyname']);
+		break;
+		
+		
+/*----- for TLA Members -----*/
+		
+	case 'getorderhistory':
+		$tla = new Members();
+		if(isset($_REQUEST['args'])) $dat=$tla->getOrderHistory($_REQUEST['args']);
+		break;
+		
+	case 'getdetailsprint':
+		$tla = new Members();
+		if(isset($_REQUEST['args'])) $dat=$tla->getDetailsPrint($_REQUEST['args']);
+		break;
+		
+	case 'getprogress':
+		$tla = new Members();
+		if(isset($_REQUEST['args'])) $dat=$tla->getProgress($_REQUEST['args']);
+		break;
+		
+	case 'getprintform':
+		$tla = new Members();
+		if(isset($_REQUEST['args'])) $dat=$tla->getPrintform($_REQUEST['args']);
+		break;
+		
+	}
+	
+	if($_REQUEST['output']=='jsonp' && isset($_REQUEST['callback'])){
+	
+		$json = new Services_JSON();
+		$res = $_REQUEST['callback'].'('.$json->encode($dat).')';
+		header("Content-Type: text/javascript; charset=utf-8");
+		
+		//header("Content-Type: application/javascript; charset=utf-8");
+
+	}else if($_REQUEST['output']=='json'){
+		$json = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
+		$res = $json->encode($dat);
+
+	}else if($_REQUEST['output']=='csv'){
+		if($_REQUEST['act']=='customerlist'){
+			// 顧客データ
+			$fieldName = array(
+				'customer_num'=>'顧客ID', 
+				'customername'=>'名前',
+				'customerruby'=>'フリガナ',
+				'dept'=>'担当',
+				'deptruby'=>'担当フリガナ',
+				'zipcode'=>'郵便番号',
+				'addr0'=>'都道府県',
+				'addr1'=>'住所１',
+				'addr2'=>'住所２',
+				'addr3'=>'部門１',
+				'addr4'=>'部門２',
+				'tel1'=>'電話番号１',
+				'tel2'=>'電話番号２',
+				'email1'=>'メール１',
+				'email2'=>'メール２',
+				'fax'=>'ファックス',
+				'total_price'=>'注文金額計',
+				'order_count'=>'注文回数',
+				'repeater'=>'リピーター',
+				'first_order'=>'初回注文',
+				'recent_order'=>'前回注文',
+			);
+			$filename = $_REQUEST['act']."-".date('Ymd').".csv";
+			$filepath = "../ctrl/".$filename;
+			$fp = fopen($filepath, 'wb');
+			if($fp==false) echo 'Error: file open';
+			$lbl = array();
+			foreach($dat[0] as $key=>$val){
+				$lbl[] = $fieldName[$key]? $fieldName[$key]: $key;
+			}
+			fputcsv($fp, $lbl);
+			foreach($dat as $line){
+				fputcsv($fp, $line);
+			}
+		}else if($_REQUEST['act']=='orderitemlist'){
+			// 注文商品データ
+			$fieldName = array(
+				'ordersid'=>'受注No.', 
+				'catname'=>'カテゴリ',
+				'item_code'=>'アイテムコード',
+				'item_name'=>'アイテム名',
+				'size_name'=>'サイズ',
+				'color_code'=>'カラーコード',
+				'color_name'=>'カラー名',
+				'maker_name'=>'メーカー',
+				'amount'=>'注文枚数',
+				'item_cost'=>'単価',
+				'addsummary'=>'摘要',
+				'addamount'=>'枚数',
+				'addcost'=>'単価',
+				'addprice'=>'金額',
+			);
+			$filename = $_REQUEST['act'];
+			if(! empty($_REQUEST['mode'])){
+				$filename .= "-".$_REQUEST['mode'];
+			}
+			$filename .= "-".date('Ymd').".csv";
+			$filepath = "../ctrl/".$filename;
+			$fp = fopen($filepath, 'wb');
+			if($fp==false) echo 'Error: file open';
+			$lbl = array();
+			foreach($dat[0] as $key=>$val){
+				$lbl[] = $fieldName[$key]? $fieldName[$key]: $key;
+			}
+			//mb_convert_variables('SJIS', 'UTF-8', $lbl);
+			fputcsv($fp, $lbl);
+			foreach($dat as $line){
+				//mb_convert_variables('SJIS', 'UTF-8', $line);
+				fputcsv($fp, $line);
+			}
+		}else{
+			// 受注データ、プリントデータ
+			$orderType = array(
+				'general'=>'一般',
+				'industry'=>'業者'
+			);
+			$carriage = array(
+				'normal'=>'宅配',
+				'accept'=>'工場渡し',
+				'telephonic'=>'できTel',
+				'other'=>'その他',
+			);
+			$payment = array(
+				'wiretransfer'=>'振込',
+				'credit'=>'カード',
+				'cod'=>'代金引換',
+				'cash'=>'現金',
+				'other'=>'その他',
+			);
+			$fieldName = array(
+				'ordersid'=>'受注No.', 
+				'staffname'=>'受注担当', 
+				'ordertype'=>'受注区分', 
+				'progressname'=>'注文状況', 
+				'maintitle'=>'題名', 
+				'pack_yes_volume'=>'袋詰有', 
+				'pack_nopack_volume'=>'袋詰無', 
+				'order_amount'=>'注文枚数', 
+				'carriage'=>'配送方法', 
+				'boxnumber'=>'箱数', 
+				'factory'=>'工場', 
+				'schedule1'=>'入稿〆日', 
+				'schedule2'=>'注文確定日', 
+				'schedule3'=>'発送日', 
+				'schedule4'=>'お届け日', 
+				'noprint'=>'プリント無し', 
+				'exchink_count'=>'インク色替え数', 
+				'manuscript'=>'入稿方法', 
+				'discount1'=>'学割', 
+				'discount2'=>'一般割引', 
+				'staffdiscount'=>'社員割', 
+				'extradiscount'=>'その他割引率', 
+				'extradiscountname'=>'その他割引名', 
+				'free_discount'=>'手入力割引', 
+				'reductionname'=>'値引き', 
+				'additionalname'=>'追加料金', 
+				'payment'=>'支払い方法', 
+				'express'=>'特急指定', 
+				'carriage'=>'送料', 
+				'deliverytime'=>'配達時間指定', 
+				'purpose'=>'用途', 
+				'job'=>'職業', 
+				'repeatdesign'=>'リピートチェック', 
+				'productfee'=>'商品代', 
+				'printfee'=>'プリント代', 
+				'silkprintfee'=>'シルク', 
+				'colorprintfee'=>'カラー転写', 
+				'digitprintfee'=>'デジタル写真', 
+				'inkjetprintfee'=>'インクジェット', 
+				'cuttingprintfee'=>'カッティング', 
+				'discountfee'=>'割引金額', 
+				'reductionfee'=>'値引き金額', 
+				'exchinkfee'=>'インク色替え代', 
+				'additionalfee'=>'追加料金', 
+				'packfee'=>'袋詰代', 
+				'expressfee'=>'特急料金', 
+				'carriagefee'=>'送料', 
+				'designfee'=>'デザイン代', 
+				'codfee'=>'代引き手数料', 
+				'creditfee'=>'カード手数料', 
+				'salestax'=>'消費税', 
+				'basefee'=>'税抜き額', 
+				'estimated'=>'売上', 
+				'customer_num'=>'顧客ID',  
+				'customername'=>'顧客名', 
+				'customerruby'=>'顧客名フリガナ', 
+				'dept'=>'担当', 
+				'deptruby'=>'担当フリガナ', 
+				'zipcode'=>'郵便番号', 
+				'addr0'=>'都道府県', 
+				'addr1'=>'住所１', 
+				'addr2'=>'住所２', 
+				'addr3'=>'会社部門１', 
+				'addr4'=>'会社部門２', 
+				'tel1'=>'電話番号１', 
+				'tel2'=>'電話番号２', 
+				'email1'=>'メールアドレス１', 
+				'email2'=>'メールアドレス２', 
+				'fax'=>'ファックス',
+
+				'ink_count'=>'インク色数',
+				'print_type'=>'プリント方法',
+				'print_option'=>'オプション',
+				'jumbo_plate'=>'ジャンボ版',
+				'design_type'=>'原稿',
+				'selective_name'=>'プリント箇所名',
+			);
+			$filename = $_REQUEST['act']."-".date('Ymd').".csv";
+			$filepath = "../ctrl/".$filename;
+			$fp = fopen($filepath, 'wb');
+			if($fp==false) echo 'Error: file open';
+			$lbl = array();
+			foreach($dat[0] as $key=>$val){
+				$lbl[] = $fieldName[$key]? $fieldName[$key]: $key;
+			}
+			fputcsv($fp, $lbl);
+				
+			foreach($dat as $line){
+				//mb_convert_variables('SJIS', 'UTF-8', $line);
+				$line['ordertype'] = $orderType[$line['ordertype']];
+				$line['carriage'] = $carriage[$line['carriage']];
+				$line['payment'] = $payment[$line['payment']];
+				fputcsv($fp, $line);
+			}
+		}
+		
+		fclose($fp);
+		header('Access-Control-Allow-Origin: *');
+		header("Content-Type: application/octet-stream");
+		header("Content-Disposition: attachment; filename=$filename");
+		readfile($filepath);
+		unlink($filepath);
+		
+	}else{
+		$res = serialize($dat);
+	}
+	
+}
+
+echo $res;
+	
+?>

@@ -1,0 +1,95 @@
+<?php
+/**
+*	Takahama Life Art
+*	posted pictures API
+*	charset utf-8
+*/
+
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/config.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/user.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/JSON.php';
+
+if(isset($_REQUEST['act'])){
+	switch($_REQUEST['act']){
+	case 'setpicture':
+		if(isset($_REQUEST['args'])) $dat=User::setPicture($_REQUEST['args']);
+		break;
+		
+	case 'updatepicture':
+		if(isset($_REQUEST['args'])) $dat=User::updatePicture($_REQUEST['args']);
+		break;
+		
+	case 'getpicturelist':
+		$dat=User::getPictureList($_REQUEST['args']);
+		break;
+		
+	case 'deletepicture':
+		if(isset($_REQUEST['args'])) $dat=User::deletePicture($_REQUEST['args']);
+		break;
+		
+	case 'setuser':
+		if(isset($_REQUEST['args']) && isset($_REQUEST['args']['reg_site'])) $dat=User::setUser($_REQUEST['args']);
+		break;
+		
+	case 'getuser':
+		if(isset($_REQUEST['args']) && isset($_REQUEST['args']['reg_site'])) $dat=User::getUser($_REQUEST['args']);
+		break;
+		
+	case 'updateuser':
+		if(isset($_REQUEST['args'])) $dat=User::updateUser($_REQUEST['args']);
+		break;
+		
+	case 'updatepass':
+		if(isset($_REQUEST['args'])) $dat=User::updatePass($_REQUEST['args']);
+		break;
+
+	case 'updateaddr':
+		if(isset($_REQUEST['args'])) $dat=User::updateAddr($_REQUEST['args']);
+		break;
+
+	case 'getdeli':
+		if(isset($_REQUEST['args'])) $dat=User::getDeli($_REQUEST['args']);
+		break;
+
+	case 'updatedeli':
+		if(isset($_REQUEST['args'])) $dat=User::updateDeli($_REQUEST['args']);
+		break;
+
+	case 'getuserlist':
+		$dat=User::getUserList($_REQUEST['args']);
+		break;
+
+	case 'checkexistemail':
+		if(isset($_REQUEST['email']) && isset($_REQUEST['reg_site'])) $dat=User::checkExistEmail2($_REQUEST['email'], $_REQUEST['reg_site']);
+		break;
+		
+	case 'checkexistname':
+		if(isset($_REQUEST['args'])) $dat=User::checkExistName($_REQUEST['args']);
+		break;
+	case 'checkexisttla':
+		if(isset($_REQUEST['args'])) $dat=User::checkExistTLA($_REQUEST['args']);
+		break;
+		
+	case 'leaveaccount':
+		if(isset($_REQUEST['args'])) $dat=User::leaveAccount($_REQUEST['args']);
+		break;
+		
+	}
+	
+	if($_REQUEST['output']=='jsonp' && isset($_REQUEST['callback'])){
+	
+		$json = new Services_JSON();
+		$res = $_REQUEST['callback'].'('.$json->encode($dat).')';
+		header("Content-Type: text/javascript; charset=utf-8");
+		
+		//header("Content-Type: application/javascript; charset=utf-8");
+		
+	}else{
+		$res = serialize($dat);
+	}
+	
+}
+
+echo $res;
+
+?>
