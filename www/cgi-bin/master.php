@@ -37,7 +37,7 @@ class Master{
  *	setAcceptingOrder	受注システムに注文データを登録する
  *	unsubscribe			お知らせメールの配信停止設定
  *	getSalesTax			外税方式の消費税率を返す		一般で_APPLY_TAX_CLASSより前は外税方式適用前のため、0%を返す
- *  validdate			日付の妥当性を確認し不正値は今日の日付を返す
+ *  validdate			日付の妥当性を確認し不正値は今日の日付を返す、ISO8601などのフォーマットにも対応
  *
  * 	(private)
  *	salestax			商品単価に使用する消費税率を返す
@@ -1032,7 +1032,7 @@ size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_fr
 			$conn = db_connect();
 			$curdate = date('Y-m-d');
 			$itemcode = quote_smart($conn, $itemcode);
-			$sql= sprintf("select * from item where lineup=1 and itemapply<='%s' and itemdate>'%s' and item_code='%s'", $curdate, $curdate, $itemcode);
+			$sql= sprintf("select id from item where lineup=1 and itemapply<='%s' and itemdate>'%s' and item_code='%s'", $curdate, $curdate, $itemcode);
 			$result = exe_sql($conn, $sql);
 			$rec = mysqli_fetch_assoc($result);
 			$rs = $rec['id'];
@@ -1466,8 +1466,9 @@ size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_fr
 		if(empty($curdate)){
 			$curdate = date('Y-m-d');
 		}else{
+			$curdate = str_replace("/", "-", $curdate);
 			$d = explode('-', $curdate);
-			if(checkdate($d[1], $d[2], $d[0])==false){
+			if(checkdate($d[1], $d[2], $d[0])===false){
 				$curdate = date('Y-m-d');
 			}
 		}

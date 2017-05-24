@@ -99,12 +99,12 @@ class Toms Extends MYDB2 {
 				}
 				
 				$row_id++;
-				$customername = mb_convert_kana($rec[$i]['customerruby'], 'ASKV', 'utf-8');	// 全角に変換
+				$customername = mb_convert_kana($rec[$i]['customerruby'], 'ASHcV', 'utf-8');// 全角ひらがな英数字に変換
 				$customername1 = mb_substr($customername, 0, 16, 'utf-8');					// マルチバイトの切り出し
 				$customername1 = mb_convert_encoding($customername1, 'sjis', 'utf-8');		// shift_jisに変換
 				$customername2 = mb_substr($customername, 0, 12, 'utf-8');					// マルチバイトの切り出し
 				$customername2 = mb_convert_encoding($customername2, 'sjis', 'utf-8');		// shift_jisに変換
-				$staffname = mb_convert_kana($rec[$i]['staffname'], 'ASKV', 'utf-8');		// 全角に変換
+				$staffname = mb_convert_kana($rec[$i]['staffname'], 'ASHcV', 'utf-8');		// 全角ひらがな英数字に変換
 				$staffname = mb_substr($staffname, 0, 16, 'utf-8');							// マルチバイトの切り出し
 				$staffname = mb_convert_encoding($staffname, 'sjis', 'utf-8');				// shift_jisに変換
 				

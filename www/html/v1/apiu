@@ -32,7 +32,7 @@ if(isset($_REQUEST['act'])){
 		break;
 		
 	case 'getuser':
-		if(isset($_REQUEST['args']) && isset($_REQUEST['args']['reg_site'])) $dat=User::getUser($_REQUEST['args']);
+		if(isset($_REQUEST['args'])) $dat=User::getUser($_REQUEST['args']);
 		break;
 		
 	case 'updateuser':
@@ -60,6 +60,7 @@ if(isset($_REQUEST['act'])){
 		break;
 
 	case 'checkexistemail':
+		if(isset($_REQUEST['args'])) $dat=User::checkExistEmail($_REQUEST['args']);
 		if(isset($_REQUEST['email']) && isset($_REQUEST['reg_site'])) $dat=User::checkExistEmail2($_REQUEST['email'], $_REQUEST['reg_site']);
 		break;
 		

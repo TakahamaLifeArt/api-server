@@ -11,20 +11,25 @@ require_once dirname(__FILE__).'/master.php';
 class Calc extends Master {
 
 /**
- * estimateEach			アイテムごとに、シルクとデジタル転写とインクジェットで最安の見積りを計算
- * printfee				シルクとデジタル転写及びインクジェットで最安のプリント代を返す。但しインクジェットはプリント可能なアイテムのみ
+ * printfee2			シルクとデジタル転写及びインクジェットで最安のプリント代を返す。但しインクジェットはプリント可能なアイテムのみ
  * calcSilkPrintFee		シルクスクリーンのプリント代を返す
  * calcInkjetFee		インクジェット（白Ｔ:inkjetと黒Ｔ:darkinkjet）のプリント代を返す
  * calcCuttingFee		カッティングのプリント代を返す
- * calcTransFee			転写のプレス代を返す（デジタル:digit、カラー（白Ｔ:transと黒Ｔ:darktrans））
- * calcTransCommonFee	転写の版代とシート代を返す（デジタル:digit、カラー（白Ｔ:transと黒Ｔ:darktrans））
+ * calcDigitFee			デジタル転写のプリント代を返す
+ * calcEmbroideryFee	刺繍のプリント代を返す
+ *
+ * ----- 2017-05-25 プリント代計算の仕様変更に伴い廃止
+ * estimateEach			（廃止）アイテムごとに、シルクとデジタル転写とインクジェットで最安の見積りを計算
+ * printfee				（廃止）シルクとデジタル転写及びインクジェットで最安のプリント代を返す。但しインクジェットはプリント可能なアイテムのみ
+ * calcTransFee			（廃止）転写のプレス代を返す（デジタル:digit、カラー（白Ｔ:transと黒Ｔ:darktrans））
+ * calcTransCommonFee	（廃止）転写の版代とシート代を返す（デジタル:digit、カラー（白Ｔ:transと黒Ｔ:darktrans））
  *
  *	(private)
- * getSheetCount		(Static)転写のシート数と版数を返す（デジタル、カラー（白Ｔと黒Ｔ））
- * getPermutation		プリント方法の組み合わせパターンを返す
- * permute				重複順列のパターンを取得する再帰モジュール
- * getPrintRatio		アイテムのプリント割増率を返す
- * getIteminfo（廃止）	アイテムIDから商品情報を返す(category_idを取得)
+ * getSheetCount		（廃止）(Static)転写のシート数と版数を返す（デジタル、カラー（白Ｔと黒Ｔ））
+ * getPermutation		（廃止）プリント方法の組み合わせパターンを返す
+ * permute				（廃止）重複順列のパターンを取得する再帰モジュール
+ * getPrintRatio		（廃止）アイテムのプリント割増率を返す
+ * getIteminfo			（廃止）アイテムIDから商品情報を返す(category_idを取得)
  */	
 	
 	private $max_ink_count = 3;							// インクが3色より多い場合は転写
@@ -34,14 +39,14 @@ class Calc extends Master {
 	private $curdate;
 	private $conn;
 	
-	public function __construct($sheetsize='1', $designsize='0'){
+	public function __construct($curdate='', $sheetsize='1', $designsize='0'){
 		if($sheetsize=='1' || $sheetsize=='0.5' || $sheetsize=='0.25'){
 			$this->sheet_size = $sheetsize;
 		}
 		if($designsize=='0' || $designsize=='1' || $designsize=='2'){
 			$this->design_size = $designsize;
 		}
-		$this->curdate = date('Y-m-d');
+		$this->curdate = parent::validdate($curdate);
 		$this->conn = MYDB2::getConnection();
 	}
 	
@@ -52,7 +57,592 @@ class Calc extends Master {
 	
 	
 	/**
-	*	アイテム情報を返す
+	*	Webサイトからのリクエストで、シルクとデジタル転写とインクジェットで最安のプリント代合計を返す
+	*	@param {array} data [アイテムID、枚数、インク色数、プリント位置、デザインサイズ、インクジェットオプション[0(淡色):枚数,1(濃色):枚数]、インクジェット[1:可,0:不可]]　
+	*						[itemid, amount, ink, pos, size, option, inkjet][...]
+	*
+	*	@return {array|NULL} ['printfee':プリント代合計金額, 'printing':[箇所名-デザインサイズID-インク色数:[プリント方法:プリント代]], 'tax':消費税率]　引数に配列以外を設定した時はNULL
+	*/
+	public function printfee2($args){
+		if (!is_array($args) || empty($args)) return null;
+		
+		try {
+			// アイテム毎の枚数
+			$len = count($args);
+			for ($i=0; $i<$len; $i++) {
+				if (empty($args[$i]['itemid'])) throw new Exception();
+				$itemAmount[$args[$i]['itemid']] = $args[$i]['amount'];
+			}
+			$itemLen = count($itemAmount);
+			
+			// 枚数レンジ分類とシルク同版分類を取得
+			$sql = 'SELECT id, item_group1_id, item_group2_id FROM item
+				 where id in('.implode( ' , ', array_fill(0, $itemLen, '?') ).') and itemapply<=? and itemdate>?';
+			$stmt = $this->conn->prepare($sql);
+			$marker = '';
+			$arr = array();
+			$stmtParams = array();
+			foreach ($itemAmount as $id=>$vol) {
+				$marker .= 'i';
+				$arr[] = $id;
+			}
+			array_push($arr, $this->curdate,$this->curdate);
+			$marker .= 'ss';
+			array_unshift($arr, $marker);
+			foreach ($arr as $key => $value) {
+				$stmtParams[$key] =& $arr[$key];	// bind_paramへの引数を参照渡しにする
+			}
+			call_user_func_array(array($stmt, 'bind_param'), $stmtParams);
+			$stmt->execute();
+			$stmt->store_result();
+			$r = MYDB2::fetchAll($stmt);
+			$stmt->close();
+			if (empty($r)) throw new Exception();
+			$recLen = count($r);
+			for ($i=0; $i<$recLen; $i++) {
+				$group1[$r[$i]['id']] = $r[$i]['item_group1_id'];		// 枚数レンジ分類
+				$group2[$r[$i]['id']] = $r[$i]['item_group2_id'];		// シルク同版分類
+			}
+			
+			// パラメータを整形
+			// param[print_type][pos_name][sect][grp] = {'ids':{}, 'vol':0, 'ink':0, 'size':0, 'opt':[], 'repeat',{}};
+			$param = array();
+			for ($i=0; $i<$len; $i++) {
+				$v = $args[$i];
+				$sect = $v['size'].'-'.$v['ink'];
+				if (isset($param[ $v['pos'] ][$sect])) {
+					$isExistDesign = true;
+				} else {
+					$isExistDesign = false;
+				}
+				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['ids'][$v['itemid']] = $itemAmount[$v['itemid']];
+				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['vol'] += $v['amount'];
+				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['ink'] = $v['ink'];
+				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['size'] = $v['size'];
+				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['opt'] = $v['option'];
+				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['repeatSilk'][ $group2[$v['itemid']] ] = 0;
+				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['repeat'] = $isExistDesign? 2: 0;
+				if ($v['inkjet']==false) {
+					// すべてのアイテムがインクジェット対応可能な場合だけ、インクジェットのプリント代を計算する
+					$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['inkjet'] = $v['inkjet'];
+				}
+			}
+			
+			// 最安のプリント方法を判定
+			$min_tot = 0;			// プリント代合計
+			$printing = array();	// プリント方法毎のプリント代
+			$detail = array();		// 詳細情報
+			foreach ($param as $posName=>$sect) {			// プリント箇所
+				foreach ($sect as $design=>$group) {		// デザイン（インク数、版種類、オプションの別）
+					$g2 = array();							// シルク同版分類IDのチェック用
+					$silkPlateCharge = array();				// シルク同版分類による版代集計用
+					$print_fee = array();					// プリント方法毎に集計
+					foreach ($group as $rangeId=>$val) {	// 枚数レンジ分類
+						$tmp = array('silk'=>0, 'digit'=>0, 'inkjet'=>0);
+						
+						// 同版分類をチェック
+						foreach ($val['repeatSilk'] as $g2Id=>$repeat) {
+							if (isset($g2[$g2Id])) {
+								$val['repeatSilk'][$g2Id] = 2;
+							} else {
+								$g2[$g2Id] = true;
+							}
+						}
+						
+						// シルク
+						$tmp['silk'] = $this->calcSilkPrintFee($val['vol'], $val['ink'], $val['ids'], 0, $val['repeatSilk']);
+						
+						// シルクの版代を一時集計、同版分類が同じで且つ枚数レンジ分類が違うアイテムに対応するため
+//						foreach ($tmp['plates'] as $g2Id=>$charge) {
+//							$silkPlateCharge[$g2Id]['fee'] += $charge;
+//							$len = count($tmp['group2'][$g2Id]);
+//							for ($i=0; $i<$len; $i++) {
+//								$itemId = $tmp['group2'][$g2Id][$i];
+//								$silkPlateCharge[$g2Id]['vol'] += $val['ids'][$itemId];
+//							}
+//							if (empty($silkPlateCharge[$g2Id]['item'])) {
+//								$silkPlateCharge[$g2Id]['item'] = $val['ids'];
+//							} else {
+//								$silkPlateCharge[$g2Id]['item'] += $val['ids'];
+//							}
+//						}
+						
+						// デジタル転写
+						$tmp['digit'] = $this->calcDigitFee($val['vol'], $val['size'], $val['ids'], $val['repeat']);
+						// デジタル転写の版代をアイテム毎に按分
+//						if (!empty($tmp['plates'])) {
+//							$per = $tmp['plates'] / $val['vol'];
+//							foreach ($val['ids'] as $itemId=>$vol) {
+//								$print_fee['item'][$itemId]['fee'] += $per * $vol;
+//							}
+//						}
+						
+						// インクジェット
+						if ($val['inkjet'] !== false) {
+							for ($i=0; $i<2; $i++) {
+								if ($val['opt'][$i]==0) continue;
+								$dat = $this->calcInkjetFee($i, $val['opt'][$i], $val['size'], $val['ids']);
+								if (empty($tmp['inkjet'])) {
+									$tmp['inkjet'] = $dat;
+								} else {
+									$tmp['inkjet']['tot'] += $dat['tot'];
+									$tmp['inkjet']['press'] += $dat['press'];
+									foreach ($dat['extra'] as $itemId => $charge) {
+										$tmp['inkjet']['extra'][$itemId] += $charge;
+									}
+								}
+							}
+						}
+						
+						// プリント方法毎の合計
+						foreach ($tmp as $printMethod => $dat) {
+							if (empty($dat)) continue;
+							$print_fee[$printMethod] += $dat['tot'];
+							
+							// アイテム毎に集計
+//							$pressPer = $tmp['press'] / $val['vol'];
+//							foreach ($val['ids'] as $itemId=>$vol) {
+//								$print_fee['item'][$itemId]['fee'] += $pressPer * $vol;
+//								if (!empty($tmp['extra'][$itemId])) {
+//									$print_fee['item'][$itemId]['fee'] += $tmp['extra'][$itemId];
+//								}
+//							}
+						}
+					}
+					
+					// シルクの版代をアイテム毎に按分
+					// 同版分類が同じで且つ枚数レンジ分類が違うアイテムに対応
+//					if (count($silkPlateCharge) > 0) {
+//						foreach ($silkPlateCharge as $g2Id=>$v) {
+//							$per = $v['fee'] / $v['vol'];
+//							foreach ($v['item'] as $itemId=>$amount) {
+//								$print_fee['item'][$itemId]['fee'] += $per * $amount;
+//							}
+//						}
+//					}
+					
+					// 箇所毎（サイズとインク色数別）に最安プリント方法を判定
+					asort($print_fee, SORT_NUMERIC);
+					$printName = key($print_fee);
+					$fee = current($print_fee);
+					$min_tot += $fee;
+					$printing[$posName.'-'.$design][$printName] += $fee;
+					
+					// プリント方法毎の代金を保持
+//					foreach($print_fee as $printName => $fee){
+//						$detail[$printName] += $fee;
+//					}
+					
+					// アイテム毎に集計
+//					foreach($print_fee['item'] as $itemId=> $val){
+//						$detail['item'][$itemId] = $val['fee'];
+//					}
+				}
+			}
+			
+			// アイテムごとに浮動小数点を丸める
+//			foreach($print_fee['item'] as &$val){
+//				$val['fee'] = round($val['fee']);
+//			}
+//			unset($val);
+			
+		} catch(Exception $e) {
+			$min_tot = '0';
+		}
+
+		// 消費税率
+		$tax = parent::getSalesTax($this->curdate);
+
+		return array('printfee'=>$min_tot, 'printing'=>$printing, 'tax'=>$tax);
+	}
+	
+	
+	
+	/**
+	 * 割増金額を抽出
+	 * @param {array} itemid アイテムIDをキーにした配列
+	 * @return {array|boolean} s結果の配列を返す。失敗の場合は{@code FALSE}を返す
+	 */
+	private function getExtraCharge($itemid){
+		try {
+//			$conn = parent::db_connect();
+			$len = count($itemid);
+			$sql = 'SELECT item.id as item_id, item_group2_id, price FROM item
+				 inner join print_group on print_group.id=print_group_id
+				 where item.id in('.implode( ' , ', array_fill(0, $len, '?') ).')
+				 and itemapply<=? and itemdate>? and print_group_apply<=? and print_group_stop>?';
+			$stmt = $this->conn->prepare($sql);
+			$marker = '';
+			$arr = array();
+			$stmtParams = array();
+			foreach ($itemid as $id=>$val) {
+				$marker .= 'i';
+				$arr[] = $id;
+			}
+			array_push($arr, $this->curdate,$this->curdate,$this->curdate,$this->curdate);
+			$marker .= 'ssss';
+			array_unshift($arr, $marker);
+			foreach ($arr as $key => $value) {
+				$stmtParams[$key] =& $arr[$key];	// bind_paramへの引数を参照渡しにする
+			}
+			call_user_func_array(array($stmt, 'bind_param'), $stmtParams);
+			$stmt->execute();
+			$stmt->store_result();
+			$r = MYDB2::fetchAll($stmt);
+		} catch (Exception $e) {
+			$r = FALSE;
+		}
+		$stmt->close();
+//		$conn->close();
+		return $r;
+	} 
+	
+	
+	
+	/**
+	 *	シルクスクリーンのプリント代を返す
+	 *		@amount		数量
+	 *		@inkcount	インク色数
+	 *		@itemid		アイテムIDをキーにした当該アイテムの枚数の配列
+	 *		@size		0:通常　1:ジャンボ版　2:スーパージャンボ
+	 *		@repeat		同版分類IDをキーにした版代を計上するかどうか判別する値、0:版代を計上　1:版代を引く（リピート）　2:版代を引く（同版）の配列
+	 *		@return		{'tot':プリント代合計, 'plates':{同版分類ID:版代}, 'press':インク代計, 'extra':{アイテムID:割増金額}, 'group2':{同版分類ID:[アイテムID]}}
+	 */
+	public function calcSilkPrintFee($amount, $inkcount, $itemid, $size=0, $repeat=0){
+		try{
+			if ($inkcount<1 || $amount<1) return 0;
+			if (empty($itemid) || !is_array($itemid)) return 0;
+			// 割増金額を取得
+			$r1 = $this->getExtraCharge($itemid);
+			if (empty($r1)) return 0;
+
+			// 割増金額をアイテム毎に算出
+			// 同版分類でアイテムIDを集計
+			$rs['extra'] = array();
+			$extraCharge = 0;
+			$len = count($r1);
+			for ($i=0; $i<$len; $i++) {
+				// 同版分類
+				$rs['group2'][ $r1[$i]['item_group2_id'] ][] = $r1[$i]['item_id'];
+				// 割増金額
+				if (empty($r1[$i]['price'])) continue;
+				$amountOfItem = $itemid[ $r1[$i]['item_id'] ];
+				$rs['extra'][$r1[$i]['item_id']] = $r1[$i]['price'] * $amountOfItem * $inkcount;
+				$extraCharge += $rs['extra'][$r1[$i]['item_id']];
+			}
+			
+			// プリント代計算の単価を取得
+			$plateName = array( 'silk-normal', 'silk-jumbo', 'silk-spjumbo' );
+			$mode = $plateName[$size];
+			$sql = 'select plate_charge.price as plateCharge, print_cost.price as inkFee from (print_method
+				 inner join print_cost on print_method.id=print_cost.print_method_id)
+				 left join plate_charge on print_method.id=plate_charge.print_method_id
+				 where mode=? and num_over<=? and (num_less>=? or num_less=0) and 
+				 print_method_apply<=? and print_method_stop>? and print_cost_apply<=? and print_cost_stop>?
+				 and plate_charge_apply<=? and plate_charge_stop>? order by operand_index asc';
+//			$conn = parent::db_connect();
+			$stmt = $this->conn->prepare($sql);
+			$stmt->bind_param("siissssss", $mode, $amount, $amount, $this->curdate, $this->curdate, $this->curdate, $this->curdate, $this->curdate, $this->curdate);
+			$stmt->execute();
+			$stmt->store_result();
+			$r2 = MYDB2::fetchAll($stmt);
+			if (empty($r2)) return 0;
+
+			// インク代
+			$tot = 0;
+			$tot += $r2[0]['inkFee'] * $amount;	// 1色目
+			if ($inkcount>1) {
+				$tot += $r2[1]['inkFee'] * $amount * ($inkcount - 1);	// 2色目以降
+			}
+			$rs['press'] = $tot;
+			
+			// 版代
+			$plates = 0;
+			if (is_array($repeat)) {
+				// 同版分類IDをキーにした版代の配列
+				foreach ($repeat as $group2Id => $isRepeat) {
+					$rs['plates'][$group2Id] = $isRepeat==0? $r2[0]['plateCharge'] * $inkcount: 0;
+					$plates += $rs['plates'][$group2Id];
+				}
+			} else {
+				$rs['plates'] = $repeat==0? $r2[0]['plateCharge'] * $inkcount: 0;
+				$plates = $rs['plates'];
+			}
+
+			// プリント代合計
+			$rs['tot'] = $rs['press'] + $plates + $extraCharge;
+		} catch(Exception $e) {
+			$rs = 0;
+		}
+
+		$stmt->close();
+//		$conn->close();
+		return $rs;
+	}
+
+
+	/**
+	 *	インクジェットのプリント代を返す
+	 *		@option		淡色:0, 濃色:1
+	 *		@amount		数量
+	 *		@size		プリントサイズ（0:大、1:中、2:小）
+	 *		@itemid		アイテムIDをキーにした当該アイテムの枚数の配列
+	 *		@return		{'tot':プリント代合計, 'press':プレス代計, 'extra':{アイテムID:割増金額}}
+	 */
+	public function calcInkjetFee($option, $amount, $size, $itemid){
+		try{
+			if ($amount<1) return 0;
+			if (empty($itemid) || !is_array($itemid)) return 0;
+
+			// 割増金額を取得
+			$r1 = $this->getExtraCharge($itemid);
+			if (empty($r1)) return 0;
+
+			// 割増金額をアイテム毎に算出
+			$rs['extra'] = array();
+			$extraCharge = 0;
+			$len = count($r1);
+			for ($i=0; $i<$len; $i++) {
+				if (empty($r1[$i]['price'])) continue;
+				$amountOfItem = $itemid[ $r1[$i]['item_id'] ];
+				$rs['extra'][$r1[$i]['item_id']] = $r1[$i]['price'] * $amountOfItem;
+				$extraCharge += $rs['extra'][$r1[$i]['item_id']];
+			}
+
+			// プリント代計算の単価を取得
+			$plateName = array( 'inkjet-pale', 'inkjet-deep' );
+			$mode = $plateName[$option];
+			$sql = 'select print_cost.price as fee from print_method
+				 inner join print_cost on print_method.id=print_cost.print_method_id
+				 where mode=? and operand_index=? and num_over<=? and (num_less>=? or num_less=0) and 
+				 print_method_apply<=? and print_method_stop>? and print_cost_apply<=? and print_cost_stop>?';
+//			$conn = parent::db_connect();
+			$stmt = $this->conn->prepare($sql);
+			$stmt->bind_param("siiissss", $mode, $size, $amount, $amount, $this->curdate, $this->curdate, $this->curdate, $this->curdate);
+			$stmt->execute();
+			$stmt->store_result();
+			$r2 = MYDB2::fetchAll($stmt);
+			if (empty($r2)) return 0;
+
+			// プリント代
+			$rs['press'] = $r2[0]['fee'] * $amount;
+
+			// プリント代合計
+			$rs['tot'] = $rs['press'] + $extraCharge;
+		} catch(Exception $e) {
+			$rs = 0;
+		}
+
+		$stmt->close();
+//		$conn->close();
+		return $rs;
+	}
+
+
+	/**
+	 *		カッティングのプリント代を返す
+	 *		@amount		数量
+	 *		@size		プリントサイズ（0:大、1:中、2:小）
+	 *		@itemid		アイテムIDをキーにした当該アイテムの枚数の配列
+	 *		@return		{'tot':プリント代合計, 'press':プレス代計, 'extra':{アイテムID:割増金額}}
+	 */
+	public function calcCuttingFee($amount, $size, $itemid){
+		try{
+			if ($amount<1) return 0;
+			if (empty($itemid) || !is_array($itemid)) return 0;
+
+			// 割増金額を取得
+			$r1 = $this->getExtraCharge($itemid);
+			if (empty($r1)) return 0;
+
+			// 割増金額をアイテム毎に算出
+			$rs['extra'] = array();
+			$extraCharge = 0;
+			$len = count($r1);
+			for ($i=0; $i<$len; $i++) {
+				if (empty($r1[$i]['price'])) continue;
+				$amountOfItem = $itemid[ $r1[$i]['item_id'] ];
+				$rs['extra'][$r1[$i]['item_id']] = $r1[$i]['price'] * $amountOfItem;
+				$extraCharge += $rs['extra'][$r1[$i]['item_id']];
+			}
+
+			// プリント代計算の単価を取得
+			$mode = 'cutting';
+			$sql = 'select print_cost.price as fee from print_method
+				 inner join print_cost on print_method.id=print_cost.print_method_id
+				 where mode=? and operand_index=? and num_over<=? and (num_less>=? or num_less=0) and 
+				 print_method_apply<=? and print_method_stop>? and print_cost_apply<=? and print_cost_stop>?';
+//			$conn = parent::db_connect();
+			$stmt = $this->conn->prepare($sql);
+			$stmt->bind_param("siiissss", $mode, $size, $amount, $amount, $this->curdate, $this->curdate, $this->curdate, $this->curdate);
+			$stmt->execute();
+			$stmt->store_result();
+			$r2 = MYDB2::fetchAll($stmt);
+			if (empty($r2)) return 0;
+
+			// プリント代
+			$rs['press'] = $r2[0]['fee'] * $amount;
+
+			// プリント代合計
+			$rs['tot'] = $rs['press'] + $extraCharge;
+		} catch(Exception $e) {
+			$rs = 0;
+		}
+
+		$stmt->close();
+//		$conn->close();
+		return $rs;
+	}
+
+
+	/**
+	 *		デジタル転写のプリント代を返す
+	 *		@amount		数量
+	 *		@size		プリントサイズ（0:大、1:中、2:小）
+	 *		@itemid		アイテムIDをキーにした当該アイテムの枚数の配列
+	 *		@repeat		0:版代を計上　1:版代を引く（リピート） 2:版代を引く（枚数レンジは違うが同版とみなす）
+	 *		@return		{'tot':プリント代合計, 'press':プレス代計, 'plates':版代, 'extra':{アイテムID:割増金額}}
+	 */
+	public function calcDigitFee($amount, $size, $itemid, $repeat=0){
+		try{
+			if ($amount<1) return 0;
+			if (empty($itemid) || !is_array($itemid)) return 0;
+
+			// 割増金額を取得
+			$r1 = $this->getExtraCharge($itemid);
+			if (empty($r1)) return 0;
+
+			// 割増金額をアイテム毎に算出
+			$rs['extra'] = array();
+			$extraCharge = 0;
+			$len = count($r1);
+			for ($i=0; $i<$len; $i++) {
+				if (empty($r1[$i]['price'])) continue;
+				$amountOfItem = $itemid[ $r1[$i]['item_id'] ];
+				$rs['extra'][$r1[$i]['item_id']] = $r1[$i]['price'] * $amountOfItem;
+				$extraCharge += $rs['extra'][$r1[$i]['item_id']];
+			}
+
+			// プリント代計算の単価を取得
+			$mode = 'trans';
+			$sql = 'select plate_charge.price as plateCharge, print_cost.price as fee from (print_method
+				 inner join print_cost on print_method.id=print_cost.print_method_id)
+				 left join plate_charge on print_method.id=plate_charge.print_method_id and operand_index=plate_index
+				 where mode=? and operand_index=? and num_over<=? and (num_less>=? or num_less=0) and 
+				 print_method_apply<=? and print_method_stop>? and print_cost_apply<=? and print_cost_stop>?
+				 and plate_charge_apply<=? and plate_charge_stop>?';
+//			$conn = parent::db_connect();
+			$stmt = $this->conn->prepare($sql);
+			$stmt->bind_param("siiissssss", $mode, $size, $amount, $amount, $this->curdate, $this->curdate, $this->curdate, $this->curdate, $this->curdate, $this->curdate);
+			$stmt->execute();
+			$stmt->store_result();
+			$r2 = MYDB2::fetchAll($stmt);
+			if (empty($r2)) return 0;
+
+			// プリント代
+			$rs['press'] = $r2[0]['fee'] * $amount;
+
+			// 版代
+			$rs['plates'] = $repeat==0? $r2[0]['plateCharge'] : 0;
+
+			// プリント代合計
+			$rs['tot'] = $rs['press'] + $rs['plates'] + $extraCharge;
+		} catch(Exception $e) {
+			$rs = 0;
+		}
+
+		$stmt->close();
+//		$conn->close();
+		return $rs;
+	}
+
+
+	/**
+	 *		刺繍のプリント代を返す
+	 *		@option		0:オリジナル, 1:ネーム
+	 *		@amount		数量
+	 *		@size		プリントサイズ（0:大、1:中、2:小）
+	 *		@itemid		アイテムIDをキーにした当該アイテムの枚数の配列
+	 *		@repeat		0:版代を計上　1:版代を引く（リピート） 2:版代を引く（枚数レンジは違うが同版とみなす）
+	 *		@return		{'tot':プリント代合計, 'press':プレス代計, 'plates':版代, 'extra':{アイテムID:割増金額}}
+	 */
+	public function calcEmbroideryFee($option, $amount, $size, $itemid, $repeat=0){
+		try{
+			if ($amount<1) return 0;
+			if (empty($itemid) || !is_array($itemid)) return 0;
+
+			// 割増金額を取得
+			$r1 = $this->getExtraCharge($itemid);
+			if (empty($r1)) return 0;
+
+			// 割増金額をアイテム毎に算出
+			$rs['extra'] = array();
+			$extraCharge = 0;
+			$len = count($r1);
+			for ($i=0; $i<$len; $i++) {
+				if (empty($r1[$i]['price'])) continue;
+				$amountOfItem = $itemid[ $r1[$i]['item_id'] ];
+				$rs['extra'][$r1[$i]['item_id']] = $r1[$i]['price'] * $amountOfItem;
+				$extraCharge += $rs['extra'][$r1[$i]['item_id']];
+			}
+
+			// プリント代の単価を取得
+			$plateName = array( 'embroidery-org', 'embroidery-name' );
+			$mode = $plateName[$option];
+			$sql = 'select print_method_id, print_cost.price as fee from print_method
+				 inner join print_cost on print_method.id=print_cost.print_method_id
+				 where mode=? and operand_index=? and num_over<=? and (num_less>=? or num_less=0) and 
+				 print_method_apply<=? and print_method_stop>? and print_cost_apply<=? and print_cost_stop>?';
+//			$conn = parent::db_connect();
+			$stmt = $this->conn->prepare($sql);
+			$stmt->bind_param("siiissss", $mode, $size, $amount, $amount, $this->curdate, $this->curdate, $this->curdate, $this->curdate);
+			$stmt->execute();
+			$stmt->store_result();
+			$r2 = MYDB2::fetchAll($stmt);
+			if (empty($r2)) return 0;
+
+			// 型代を取得
+			$sql = 'select coalesce(plate_charge.price, 0) as plateCharge from plate_charge
+				 where print_method_id=? and plate_index=? and plate_charge_apply<=? and plate_charge_stop>?';
+			$stmt = $this->conn->prepare($sql);
+			$stmt->bind_param("iiss", $r2[0]['print_method_id'], $size, $this->curdate, $this->curdate);
+			$stmt->execute();
+			$stmt->store_result();
+			$r3 = MYDB2::fetchAll($stmt);
+			if (empty($r3)) {
+				$rs['plates'] = 0;
+			} else {
+				$rs['plates'] = $repeat==0? $r3[0]['plateCharge'] : 0;
+			}
+
+			// プリント代
+			$rs['press'] = $r2[0]['fee'] * $amount;
+
+			// プリント代合計
+			$rs['tot'] = $rs['press'] + $rs['plates'] + $extraCharge;
+		} catch(Exception $e) {
+			$rs = 0;
+		}
+
+		$stmt->close();
+//		$conn->close();
+		return $rs;
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+
+	
+/*============ 旧バージョン =================================================================================*/
+
+	
+	/**
+	*	アイテム情報を返す（未使用）
 	*	@itemid			アイテムのID
 	*
 	*	@return			catalog データの配列
@@ -66,77 +656,16 @@ class Calc extends Master {
 			$stmt->bind_param("ssi", $curdate, $curdate, $itemid);
 			$stmt->execute();
 			$stmt->store_result();
-			$rec = self::fetchAll($stmt);
+			$rec = MYDB2::fetchAll($stmt);
 		}catch(Exception $e){
 			$rec = '';
 		}
-		
+
 		$stmt->close();
 		$conn->close();
 		return $rec;
 	}
 	*/
-	
-	
-	/**
-	*	アイテムごとに、シルクとデジタル転写とインクジェットで最安の見積りを計算（プリント位置は1ヵ所）して最安の商品単価から見積り
-	*	@data		アイテムコード、枚数、インク色数、プリント位置の配列　[itemcode, amount, ink, pos][...]
-	*
-	*	@return		[item_code:['price':見積額, 'perone':1枚あたり]][...]　引数に配列以外を設定した時はNULL
-	*/
-	public function estimateEach($data){
-		if(!is_array($data) || empty($data)) return null;
-		try{
-			// 計算日時点の消費税率
-			$curdate = date('Y-m-d');
-			$tax = parent::getSalesTax($curdate);
-			$tax /= 100;
-			
-			// インクジェット可能なアイテムIDを取得
-			$ids = parent::itemIdOf(85, NULL, "tag");
-		
-			$area = 1;
-			//$sheet = array($this->sheet_size);
-			//$extra = array(1);
-			$plates = 0;
-			for($i=0; $i<count($data); $i++){
-				$idx = 0;
-				$ary = array();
-				$id = parent::getItemID($data[$i]['itemcode']);
-				$cost = parent::getItemprice($id);
-				$ratio = $this->getPrintRatio($id);	
-				$silk = $this->calcSilkPrintFee($data[$i]['amount'], $area, $data[$i]['ink'], NULL, $ratio);
-				$ary[$idx++] = $silk['tot'];
-				if(in_array($id, $ids)){
-					$inkjet = $this->calcInkjetFee($data[$i]['amount'], $area, $this->design_size, NULL, $ratio);
-					$ary[$idx++] = $inkjet['tot'];
-				}
-				// 版代とシート代用
-				$commonData['sheet'][$plates][] = $this->sheet_size;
-				$commonData['shot'][$plates][] = $data[$i]['amount'];
-				// プレス代用
-				$transData['amount'][] = $data[$i]['amount'];
-				$transData['ratio'][] = $ratio;
-				$transData['extra'][] = 1;
-				$transData['press'][] = 0; // 固定
-				// 転写の版代とシート代を返す
-				$common_cost = $this->calcTransCommonFee('digit', $commonData['sheet'], $commonData['shot']);
-				$trans = $common_cost[0]+$common_cost[1];
-				// 転写のプレス代を返す
-				$trans += $this->calcTransFee('digit', $transData['amount'], $transData['extra'], NULL, $transData['ratio'], $transData['press']);
-				$ary[$idx++] = $trans;
-				
-				$fee = min($ary) + ($cost[0]['price_white']*$data[$i]['amount']);
-				$price = floor($fee*(1+$tax));
-				$res[$data[$i]['itemcode']]['price'] = $price;
-				$res[$data[$i]['itemcode']]['perone'] = ceil($price/$data[$i]['amount']);
-			}
-		}catch(Exception $e){
-			$res = '0';
-		}
-		
-		return $res;
-	}
 	
 	
 	
@@ -245,7 +774,7 @@ class Calc extends Master {
 				foreach($ary as $v){
 					if($pattern[$i][$c]=="inkjet" && $v['inkjet']){
 						foreach($v['option'] as $optionValue=>$volume){
-							$fee = $this->calcInkjetFee($volume, 1, $this->design_size, NULL, $v['ratio'], $optionValue, $v['extra']);
+							$fee = $this->t_calcInkjetFee($volume, 1, $this->design_size, NULL, $v['ratio'], $optionValue, $v['extra']);
 							$tot += $fee['tot'];
 						}
 					}else if($pattern[$i][$c]=="digit"){
@@ -281,7 +810,7 @@ class Calc extends Master {
 						*/
 					}else{
 						// silk
-						$fee = $this->calcSilkPrintFee($v['amount'], 1, $v['ink'], NULL, $v['ratio'], $jumbo, $v['extra']);
+						$fee = $this->t_calcSilkPrintFee($v['amount'], 1, $v['ink'], NULL, $v['ratio'], $jumbo, $v['extra']);
 						$tot += $fee['tot'];
 					}
 				}
@@ -389,6 +918,66 @@ class Calc extends Master {
 	}
 	
 	
+	/**
+	*	アイテムごとに、シルクとデジタル転写とインクジェットで最安の見積りを計算（プリント位置は1ヵ所）して最安の商品単価から見積り
+	*	@data		アイテムコード、枚数、インク色数、プリント位置の配列　[itemcode, amount, ink, pos][...]
+	*
+	*	@return		[item_code:['price':見積額, 'perone':1枚あたり]][...]　引数に配列以外を設定した時はNULL
+	*/
+	public function estimateEach($data){
+		if(!is_array($data) || empty($data)) return null;
+		try{
+			// 計算日時点の消費税率
+			$curdate = date('Y-m-d');
+			$tax = parent::getSalesTax($curdate);
+			$tax /= 100;
+
+			// インクジェット可能なアイテムIDを取得
+			$ids = parent::itemIdOf(85, NULL, "tag");
+
+			$area = 1;
+			//$sheet = array($this->sheet_size);
+			//$extra = array(1);
+			$plates = 0;
+			for($i=0; $i<count($data); $i++){
+				$idx = 0;
+				$ary = array();
+				$id = parent::getItemID($data[$i]['itemcode']);
+				$cost = parent::getItemprice($id);
+				$ratio = $this->getPrintRatio($id);	
+				$silk = $this->t_calcSilkPrintFee($data[$i]['amount'], $area, $data[$i]['ink'], NULL, $ratio);
+				$ary[$idx++] = $silk['tot'];
+				if(in_array($id, $ids)){
+					$inkjet = $this->t_calcInkjetFee($data[$i]['amount'], $area, $this->design_size, NULL, $ratio);
+					$ary[$idx++] = $inkjet['tot'];
+				}
+				// 版代とシート代用
+				$commonData['sheet'][$plates][] = $this->sheet_size;
+				$commonData['shot'][$plates][] = $data[$i]['amount'];
+				// プレス代用
+				$transData['amount'][] = $data[$i]['amount'];
+				$transData['ratio'][] = $ratio;
+				$transData['extra'][] = 1;
+				$transData['press'][] = 0; // 固定
+				// 転写の版代とシート代を返す
+				$common_cost = $this->calcTransCommonFee('digit', $commonData['sheet'], $commonData['shot']);
+				$trans = $common_cost[0]+$common_cost[1];
+				// 転写のプレス代を返す
+				$trans += $this->calcTransFee('digit', $transData['amount'], $transData['extra'], NULL, $transData['ratio'], $transData['press']);
+				$ary[$idx++] = $trans;
+
+				$fee = min($ary) + ($cost[0]['price_white']*$data[$i]['amount']);
+				$price = floor($fee*(1+$tax));
+				$res[$data[$i]['itemcode']]['price'] = $price;
+				$res[$data[$i]['itemcode']]['perone'] = ceil($price/$data[$i]['amount']);
+			}
+		}catch(Exception $e){
+			$res = '0';
+		}
+
+		return $res;
+	}
+	
 	
 	/**
 	 *		シルクスクリーンのプリント代を返す
@@ -405,7 +994,7 @@ class Calc extends Master {
 	 *
 	 *		return		{'tot':プリント代, 'plates':版代＋デザイン代, 'setting':組付け代, 'press':インク代}
 	 */
-	public function calcSilkPrintFee($amount, $area, $inkcount, $itemid=0, $ratio=1, $size=0, $extra=1, $repeat=0){
+	public function t_calcSilkPrintFee($amount, $area, $inkcount, $itemid=0, $ratio=1, $size=0, $extra=1, $repeat=0){
 		try{
 			if($area<1 || $inkcount<1 || $amount<1) return 0;
 			
@@ -499,7 +1088,7 @@ class Calc extends Master {
 	 *
 	 *		return		{'tot':プリント代, 'plates':版代＋デザイン代, 'setting':組付け代, 'press':プレス代}
 	 */
-	public function calcInkjetFee($amount, $area, $size, $itemid=0, $ratio=1, $option=0, $extra=1, $repeat=0){
+	public function t_calcInkjetFee($amount, $area, $size, $itemid=0, $ratio=1, $option=0, $extra=1, $repeat=0){
 		try{
 			if($amount<1) return 0;
 			if(!empty($itemid)){
@@ -585,7 +1174,7 @@ class Calc extends Master {
 	 *
 	 *		return		{'tot':プリント代, 'plates':版代＋デザイン代, 'setting':組付け代, 'press':プレス代}
 	 */
-	public function calcCuttingFee($amount, $area, $size, $itemid=0, $ratio=1, $extra=1, $repeat=0){
+	public function t_calcCuttingFee($amount, $area, $size, $itemid=0, $ratio=1, $extra=1, $repeat=0){
 		try{
 			if($amount<1) return 0;
 			if(!empty($itemid)){

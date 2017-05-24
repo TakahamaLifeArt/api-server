@@ -353,12 +353,11 @@ class User {
 			$sha1pass = self::getSha1Pass($args['pass']);
 			
 			if($sha1pass!=_MAGIC_PASS){
-				$stmt = $conn->prepare('select * from customer where email=? and password=? and reg_site=? limit 1');
-				//テーブルcustomerのコラム「reg_site」を条件として追加する必要がある
-				$stmt->bind_param('sss', $args['email'], $sha1pass,$args['reg_site']);
+				$stmt = $conn->prepare('select * from customer where email=? and password=? limit 1');
+				$stmt->bind_param('ss', $args['email'], $sha1pass);
 			}else{
-				$stmt = $conn->prepare('select * from customer where email=? and reg_site=? limit 1');
-				$stmt->bind_param('ss', $args['email'],$args['reg_site']);
+				$stmt = $conn->prepare('select * from customer where email=? limit 1');
+				$stmt->bind_param('s', $args['email']);
 			}
 			$stmt->execute();
 			$stmt->store_result();
@@ -540,7 +539,7 @@ class User {
 
 	/*
 	*	お届け先の取得
-  * 2017-02-13
+  	* 2017-02-13
 	*	@args	{'userid'}
 	*
 	*	reutrn [お届け先情報]

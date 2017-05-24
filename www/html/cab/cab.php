@@ -82,7 +82,7 @@ class Cab Extends MYDB2 {
 			$conn = parent::db_connect();
 			
 			// JAN CODE
-			$sql ="select jan_code, amount, customername, opp, package_no from ((((((orders
+			$sql ="select jan_code, amount, customerruby, opp, package_no from ((((((orders
 				 inner join customer on customer_id=customer.id)
 				 inner join orderitem on orders.id=orderitem.orders_id)
 				 inner join acceptstatus on orders.id=acceptstatus.orders_id)
@@ -163,7 +163,7 @@ class Cab Extends MYDB2 {
 			
 			// ヘッダーデータ生成
 			$record_header = "";
-			$customername = mb_convert_kana($rec[0]['customername'], 'ASKV', 'utf-8');	// 全角に変換
+			$customername = mb_convert_kana($rec[0]['customerruby'], 'ASHcV', 'utf-8');	// 全角ひらがなに変換
 			$customername = mb_substr($customername, 0, 18, 'utf-8');					// マルチバイトの切り出し
 			$customername = mb_convert_encoding($customername, 'sjis', 'utf-8');		// shift_jisに変換
 			$data = array();

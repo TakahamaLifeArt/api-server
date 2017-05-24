@@ -42,40 +42,97 @@ if(isset($_REQUEST['act'])){
 		break;
 		
 	case 'printfee':
+	/**
+	 * 428HP 申し込み（/order）
+	 * 		 料金の目安（/price/js/standard.js）
+	 *		 アイテム詳細（/items/js/estimate_sole.js）
+	 *		 シーン別（/scene/js/estimate_sole.js）
+	 *		 ホーム（/js/top.js）
+	 * staff-tshirt
+	 * sweatjack
+	 * 受注システム
+	 *
+	 * @itemid		アイテムID
+	 * @amount		箇所毎の枚数
+	 * @ink			インク色数
+	 * @pos			箇所名
+	 * @size		デザインのサイズ{code: 0,1,2}
+	 * @option		プリント方法を指定している場合、インクジェットまたは刺繍のオプション指定{code: 0,1} default:0
+	 *				最安値算出の場合、インクジェットのオプションをキーにした枚数の配列[0(淡色):枚数,1(濃色):枚数] （白色：淡色）
+	 * @itemcode	アイテムIDではなく、アイテムコードで指定の場合
+	 * @curdate		計算する日付をしてい（yyy-mm-dd）
+	 * @printmethos	プリント方法
+	 * @return {array}	プリント方法を指定している場合、{code: 'tot':プリント代}
+	 *					最安値算出の場合、{code: 'printfee':プリント代}
+	 */
 		$sheetsize = '1';
 		if(isset($_REQUEST['sheetsize'])){
 			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
 				$sheetsize = $_REQUEST['sheetsize'];
 			}
 		}
-		if (!isset($_REQUEST['curdate'])) {
+		if (!isset($_REQUEST['printmethod'])) {
+		/**
+		 * Webサイトからリクエスト
+		 */
 			$curdate = date('Y-m-d');
+			// 2017-05-25 00:00:00 から仕様変更
+			if (strtotime('2017-05-25 00:00:00') <= time()) {
+				$isSpecVer2 = true;
+			} else {
+				$isSpecVer2 = false;
+			}
+			
+			// インクジェット可能なアイテムIDを取得
+			$ids = $mst->itemIdOf(85, NULL, "tag");
 		} else {
-			$curdate = $_REQUEST['curdate'];
-		}
-		
-		$calc = new Calc($sheetsize);
-		
-		// 2017-05-24 14:00:00 から仕様変更
-		$isSpecVer2 = false;
-		
-		/*
-		if (strtotime('2017-05-24 14:00:00') <= time()) {
-			$isSpecVer2 = true;
-		} else {
-			$isSpecVer2 = false;
-		}
+		/**
+		* 受注システムからリクエスト
 		*/
-
-		// インクジェット可能なアイテムIDを取得
-		$ids = $mst->itemIdOf(85, NULL, "tag");
+			$curdate = $mst->validdate($_REQUEST['curdate']);
+			if (strtotime('2017-05-25') <= strtotime($curdate)) {
+				$isSpecVer2 = true;
+			} else {
+				$isSpecVer2 = false;
+			}
+		}
 		
-		if(isset($_REQUEST['itemid'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
-			for($i=0; $i<count($_REQUEST['amount']); $i++){
+		$calc = new Calc($curdate, $sheetsize);
+		
+		if (isset($_REQUEST['printmethod'])) {
+		/**
+		 * プリント代計算の仕様変更に伴い受注システムで使用
+		 * 2017-05-25以降の発送日指定もしくは発送日指定なし
+		 */
+			if ($isSpecVer2) {
+				$args = $_REQUEST['args'];
+				switch ($_REQUEST['printmethod']) {
+					case 'silk':
+						$dat = $calc->calcSilkPrintFee($args['vol'], $args['ink'], $args['ids'], $args['size'], $args['repeat']);
+						break;
+					case 'digit': 
+						$dat = $calc->calcDigitFee($args['vol'], $args['size'], $args['ids'], $args['repeat']);
+						break;
+					case 'inkjet':
+						$dat = $calc->calcInkjetFee($args['opt'], $args['vol'], $args['size'], $args['ids']);
+					 	break;
+					case 'cutting':
+						$dat = $calc->calcCuttingFee($args['vol'], $args['size'], $args['ids']);
+					 	break;
+					case 'embroidery':
+						$dat = $calc->calcEmbroideryFee($args['opt'], $args['vol'], $args['size'], $args['ids'], $args['repeat']);
+					 	break;
+					default: $dat = 0;
+				}
+			} else {
+				$dat = 0;
+			}
+		} else if (isset($_REQUEST['itemid'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])) {
+			for ($i=0; $i<count($_REQUEST['amount']); $i++) {
 				$isInkjet = in_array($_REQUEST['itemid'][$i], $ids);
-				if(isset($_REQUEST['color'])){
+				if (isset($_REQUEST['color'])) {
 					$inkjetOption = $_REQUEST['color'][$i]!='ホワイト'? 1: 0;
-				}else{
+				} else {
 					$inkjetOption = 0;
 				}
 				$args[$i] = array(
@@ -92,11 +149,14 @@ if(isset($_REQUEST['act'])){
 			} else {
 				$dat=$calc->printfee($args);
 			}
-		}else if(isset($_REQUEST['args'])){
-			for($i=0; $i<count($_REQUEST['args']); $i++){
+		} else if (isset($_REQUEST['args'])) {
+			for ($i=0; $i<count($_REQUEST['args']); $i++) {
 				$_REQUEST['args'][$i]['inkjet'] = in_array($_REQUEST['args'][$i]['itemid'], $ids);
-				if(! array_key_exists('option', $_REQUEST['args'][$i])){
+				if (! array_key_exists('option', $_REQUEST['args'][$i])) {
 					$_REQUEST['args'][$i]['option'] = array($_REQUEST['args'][$i]['amount']);
+				}
+				if (array_key_exists('itemcode', $_REQUEST['args'][$i])) {
+					$_REQUEST['args'][$i]['itemid'] = $mst->getItemID($_REQUEST['args'][$i]['itemcode']);
 				}
 			}
 			if ($isSpecVer2) {
@@ -104,12 +164,108 @@ if(isset($_REQUEST['act'])){
 			} else {
 				$dat=$calc->printfee($_REQUEST['args']);
 			}
-		}else{
+		} else {
 			$dat = array('printfee'=>'0');
 		}
 		
 		break;
 		
+	case 'printfeelist':
+	/**
+	 * 428HP 10秒見積もり(/price/js/estimate.js)
+	 */
+		$sheetsize = '1';
+		if(isset($_REQUEST['sheetsize'])){
+			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
+				$sheetsize = $_REQUEST['sheetsize'];
+			}
+		}
+		
+		$curdate = date('Y-m-d');
+		// 2017-05-25 00:00:00 から仕様変更
+		if (strtotime('2017-05-25 00:00:00') <= time()) {
+		$isSpecVer2 = true;
+		} else {
+		$isSpecVer2 = false;
+		}
+
+		$calc = new Calc($curdate, $sheetsize);
+
+		// インクジェット可能なアイテムIDを取得
+		$ids = $mst->itemIdOf(85, NULL, "tag");
+		
+		if(isset($_REQUEST['itemid'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
+			for($i=0; $i<count($_REQUEST['amount']); $i++){
+				$isInkjet = in_array($_REQUEST['itemid'][$i], $ids);
+				if(isset($_REQUEST['option'])){
+					$inkjetOption = array($_REQUEST['option'][$i]=>$_REQUEST['amount'][$i]);
+				}else{
+					$inkjetOption = array($_REQUEST['amount'][$i]);
+				}
+				$args[$_REQUEST['itemid'][$i]][] = array('itemid' => $_REQUEST['itemid'][$i],
+														 'amount' => $_REQUEST['amount'][$i],
+														 'ink' => $_REQUEST['ink'][$i],
+														 'pos' => $_REQUEST['pos'][$i],
+														 'size' => $_REQUEST['size'][$i],
+														 'inkjet' => $isInkjet,
+														 'option' => $inkjetOption
+														);
+			}
+			if (isSpecVer2) {
+				foreach($args as $itemid=>$val){
+					$res = $calc->printfee2($val);
+					$res['itemid'] = $itemid;
+					$dat[] = $res;
+				}
+			} else {
+				foreach($args as $itemid=>$val){
+					$res = $calc->printfee($val);
+					$res['itemid'] = $itemid;
+					$dat[] = $res;
+				}
+			}
+			
+		}else{
+			$dat = array('printfee'=>'0');
+		}
+		break;
+
+	case 'estimateeach':
+	/**
+	 * 旧バージョン（2017-05-25に仕様変更）
+	 */
+		$sheetsize = '1';
+		if(isset($_REQUEST['sheetsize'])){
+			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
+				$sheetsize = $_REQUEST['sheetsize'];
+			}
+		}
+		$calc = new Calc('', $sheetsize);
+		if(isset($_REQUEST['itemcode'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
+			for($i=0; $i<count($_REQUEST['amount']); $i++){
+				$args[$i] = array('itemcode'=>$_REQUEST['itemcode'][$i],'amount'=>$_REQUEST['amount'][$i],'ink'=>$_REQUEST['ink'][$i],'pos'=>$_REQUEST['pos'][$i]);
+			}
+			$dat=$calc->estimateEach($args);
+		}else{
+			$dat = array('0');
+		}
+		break;
+
+	case 'silkprintfee':
+	/**
+	 * 旧バージョン（2017-05-25に仕様変更）
+	 */
+		$sheetsize = '1';
+		$calc = new Calc('', $sheetsize);
+		if(isset($_REQUEST['args'])){
+			for($i=0; $i<count($_REQUEST['args']); $i++){
+				$a = $_REQUEST['args'][$i];
+				$r = $calc->calcSilkPrintFee($a['amount'], $a['area'], $a['ink'], $a['item_id'], $a['ratio'], $a['size'], $a['extra'], $a['repeat']);
+				$dat += $r['tot'];
+			}
+		}
+		break;
+
 		
 /*----- end public API -----*/
 
@@ -148,73 +304,6 @@ if(isset($_REQUEST['act'])){
 		
 	case 'sizeprice':
 		if(isset($_REQUEST['itemid'], $_REQUEST['colorcode'])) $dat=$mst->getSizePrice($_REQUEST['itemid'], $_REQUEST['colorcode']);
-		break;
-		
-	case 'estimateeach':
-		$sheetsize = '1';
-		if(isset($_REQUEST['sheetsize'])){
-			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
-				$sheetsize = $_REQUEST['sheetsize'];
-			}
-		}
-		$calc = new Calc($sheetsize);
-		if(isset($_REQUEST['itemcode'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
-			for($i=0; $i<count($_REQUEST['amount']); $i++){
-				$args[$i] = array('itemcode'=>$_REQUEST['itemcode'][$i],'amount'=>$_REQUEST['amount'][$i],'ink'=>$_REQUEST['ink'][$i],'pos'=>$_REQUEST['pos'][$i]);
-			}
-			$dat=$calc->estimateEach($args);
-		}else{
-			$dat = array('0');
-		}
-		break;
-		
-	case 'printfeelist':
-		$sheetsize = '1';
-		if(isset($_REQUEST['sheetsize'])){
-			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
-				$sheetsize = $_REQUEST['sheetsize'];
-			}
-		}
-		$calc = new Calc($sheetsize);
-		
-		// インクジェット可能なアイテムIDを取得
-		$ids = $mst->itemIdOf(85, NULL, "tag");
-		if(isset($_REQUEST['itemid'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
-			for($i=0; $i<count($_REQUEST['amount']); $i++){
-				$isInkjet = in_array($_REQUEST['itemid'][$i], $ids);
-				if(isset($_REQUEST['option'])){
-					$inkjetOption = array($_REQUEST['option'][$i]=>$_REQUEST['amount'][$i]);
-				}else{
-					$inkjetOption = array($_REQUEST['amount'][$i]);
-				}
-				$args[$_REQUEST['itemid'][$i]][] = array('itemid'=>$_REQUEST['itemid'][$i],
-														 'amount'=>$_REQUEST['amount'][$i],
-														 'ink'=>$_REQUEST['ink'][$i],
-														 'pos'=>$_REQUEST['pos'][$i],
-														 'inkjet'=>$isInkjet,
-														 'option'=>$inkjetOption
-														 );
-			}
-			foreach($args as $itemid=>$val){
-				$res = $calc->printfee($val);
-				$res['itemid'] = $itemid;
-				$dat[] = $res;
-			}
-		}else{
-			$dat = array('printfee'=>'0');
-		}
-		break;
-		
-	case 'silkprintfee':
-		$sheetsize = '1';
-		$calc = new Calc($sheetsize);
-		if(isset($_REQUEST['args'])){
-			for($i=0; $i<count($_REQUEST['args']); $i++){
-				$a = $_REQUEST['args'][$i];
-				$r = $calc->calcSilkPrintFee($a['amount'], $a['area'], $a['ink'], $a['item_id'], $a['ratio'], $a['size'], $a['extra'], $a['repeat']);
-				$dat += $r['tot'];
-			}
-		}
 		break;
 		
 	case 'exwmail':
