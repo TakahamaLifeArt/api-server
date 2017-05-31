@@ -488,7 +488,7 @@ class User {
 	
 	/*
 	*	パスワードの更新
-	*	@args	{'userid','pass'}
+	*	@args	{'userid','pass','temp'}、仮パスワードの場合はtempで暗号化前のパスを設定
 	*
 	*	reutrn	true:OK　false:NG
 	*/
@@ -497,8 +497,13 @@ class User {
 			//$conn = self::db_connect();
 			$conn = db_connect();
 			$pass = self::getSha1Pass($args['pass']);
-			$stmt = $conn->prepare("update customer set password=? where id=?");
-			$stmt->bind_param('si', $pass,$args['userid']);
+			if (empty($args['temp'])) {
+				$stmt = $conn->prepare("update customer set password=?, temppass='' where id=?");
+				$stmt->bind_param('si', $pass,$args['userid']);
+			} else {
+				$stmt = $conn->prepare("update customer set password=?, temppass=? where id=?");
+				$stmt->bind_param('ssi', $pass,$args['pass'],$args['userid']);
+			}
 			$stmt->execute();
 			
 			$rs = true;
