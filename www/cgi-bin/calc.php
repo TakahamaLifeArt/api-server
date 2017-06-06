@@ -110,21 +110,20 @@ class Calc extends Master {
 			for ($i=0; $i<$len; $i++) {
 				$v = $args[$i];
 				$sect = $v['size'].'-'.$v['ink'];
-				if (isset($param[ $v['pos'] ][$sect])) {
-					$isExistDesign = true;
-				} else {
-					$isExistDesign = false;
-				}
 				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['ids'][$v['itemid']] = $itemAmount[$v['itemid']];
 				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['vol'] += $v['amount'];
 				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['ink'] = $v['ink'];
 				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['size'] = $v['size'];
-				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['opt'] = $v['option'];
 				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['repeatSilk'][ $group2[$v['itemid']] ] = 0;
-				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['repeat'] = $isExistDesign? 2: 0;
-				if ($v['inkjet']==false) {
+				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['repeat'] = 0;
+				foreach ($v['option'] as $idx=>$amount) {
+					$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['opt'][$idx] += $amount;
+				}
+				if (empty($v['inkjet'])) {
 					// すべてのアイテムがインクジェット対応可能な場合だけ、インクジェットのプリント代を計算する
-					$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['inkjet'] = $v['inkjet'];
+					$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['inkjet'] = false;
+				} else if ($param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['inkjet']!==false) {
+					$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['inkjet'] = true;
 				}
 			}
 			
@@ -134,13 +133,15 @@ class Calc extends Master {
 			$detail = array();		// 詳細情報
 			foreach ($param as $posName=>$sect) {			// プリント箇所
 				foreach ($sect as $design=>$group) {		// デザイン（インク数、版種類、オプションの別）
+					$g1Count = 0;							// デジ転の枚数レンジの種類のカウント用
+					$digitPlateCharge = array();			// デジ転の版代集計用
 					$g2 = array();							// シルク同版分類IDのチェック用
 					$silkPlateCharge = array();				// シルク同版分類による版代集計用
 					$print_fee = array();					// プリント方法毎に集計
 					foreach ($group as $rangeId=>$val) {	// 枚数レンジ分類
 						$tmp = array('silk'=>0, 'digit'=>0, 'inkjet'=>0);
 						
-						// 同版分類をチェック
+						// シルク同版分類をチェック
 						foreach ($val['repeatSilk'] as $g2Id=>$repeat) {
 							if (isset($g2[$g2Id])) {
 								$val['repeatSilk'][$g2Id] = 2;
@@ -167,6 +168,11 @@ class Calc extends Master {
 //							}
 //						}
 						
+						// デジ転で同じデザインで枚数レンジ分類が違うアイテムは版代を除く
+						if (++$g1Count>1) {
+							$val['repeat'] = 2;
+						}
+						
 						// デジタル転写
 						$tmp['digit'] = $this->calcDigitFee($val['vol'], $val['size'], $val['ids'], $val['repeat']);
 						// デジタル転写の版代をアイテム毎に按分
@@ -178,9 +184,9 @@ class Calc extends Master {
 //						}
 						
 						// インクジェット
-						if ($val['inkjet'] !== false) {
+						if ($val['inkjet'] === true) {
 							for ($i=0; $i<2; $i++) {
-								if ($val['opt'][$i]==0) continue;
+								if (empty($val['opt'][$i])) continue;
 								$dat = $this->calcInkjetFee($i, $val['opt'][$i], $val['size'], $val['ids']);
 								if (empty($tmp['inkjet'])) {
 									$tmp['inkjet'] = $dat;
