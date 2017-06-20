@@ -80,7 +80,6 @@ class CabStock Extends MYDB2 {
 			*/
 			//$result->free();
 			// 既存の在庫レコードの有無を確認
-			//$sql1 = "select count(*) as cnt from (itemstock inner join catalog on catalog.id=stock_master_id) inner join item on item_id=item.id where jan_code=? and catalog.color_code=? and catalogdate='3000-01-01' and itemdate='3000-01-01'";
 			$sql1 = "select count(*) as cnt from itemstock where jan_code=? and stock_master_id=?";
 			$stmt_count = $conn->prepare($sql1);
 			// 既存の在庫レコードがあれば更新
@@ -97,6 +96,9 @@ class CabStock Extends MYDB2 {
 			// 新規登録
 			$sql4 = "insert into itemstock(stock_master_id,stock_item_id,stock_size_id,stock_volume,stock_maker,jan_code,stock_updated) values(?,?,?,?,?,?,?)";
 			$stmt_insert = $conn->prepare($sql4);
+			// 既存の在庫レコードの指定サイズの有無を確認
+			$sql5 = "select count(*) as cnt from itemstock where stock_size_id=? and stock_master_id=?";
+			$stmt_exists_size = $conn->prepare($sql5);
 			// 在庫数を更新
 			for($i=0; $i<count($args); $i++){
 				$param1 = $args[$i]['item_code']."-%";
@@ -116,15 +118,22 @@ class CabStock Extends MYDB2 {
 					if(empty($rec[$t]['master_id'])){
 						$err[] = $args[$i]['item_code'].' - '.$args[$i]['color_code'].' - '.$args[$i]['size_name'];
 					}else{
-						$stmt_count->bind_param("ss", $args[$i]['jancode'],$rec[$t]['master_id']);
+						$stmt_count->bind_param("si", $args[$i]['jancode'],$rec[$t]['master_id']);
 						$stmt_count->execute();
 						$stmt_count->store_result();
 						$rec2 = parent::fetchAll($stmt_count);
 						if(empty($rec2[0]['cnt'])){
-							$dat = $rec[$t];
-							$stmt_insert->bind_param("iiiiiss", $dat['master_id'], $dat['itemid'], $dat['size_from'], $args[$i]['amount'], $maker_id, $args[$i]['jancode'], date('Y-m-d H:i:s'));
-							$maker_id = 2;
-							$stmt_insert->execute();
+							$stmt_exists_size->bind_param("ii", $args[$i]['size_from'],$rec[$t]['master_id']);
+							$stmt_exists_size->execute();
+							$stmt_exists_size->store_result();
+							$rec3 = parent::fetchAll($stmt_exists_size);
+							// 新しいJANコードで且つ同じサイズが未登録の場合は新規登録
+							if (empty($rec3[0]['cnt'])) {
+								$dat = $rec[$t];
+								$stmt_insert->bind_param("iiiiiss", $dat['master_id'], $dat['itemid'], $dat['size_from'], $args[$i]['amount'], $maker_id, $args[$i]['jancode'], date('Y-m-d H:i:s'));
+								$maker_id = 2;
+								$stmt_insert->execute();
+							}
 						}else{
 							$stmt_update->bind_param("iss", $args[$i]['amount'], date('Y-m-d H:i:s'), $args[$i]['jancode']);
 							$stmt_update->execute();
