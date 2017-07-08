@@ -7,7 +7,7 @@
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/weblib/willmail/CustomerTLA.php';
 try {
 	$customer = new CustomerTLA('customer_num');
-	$resp = $customer->upsert(date('Y-m-d'), 'put');
+	$resp = $customer->upsert(date('Y-m-d'), 'POST');
 	if (is_string($resp)) {
 		throw new Exception($resp);
 	}
