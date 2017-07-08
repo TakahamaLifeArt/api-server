@@ -1,0 +1,14 @@
+<IfModule mod_rewrite.c>
+	Options -Indexes
+
+	# URL書き換えを許可
+	RewriteEngine on
+
+	# URL書き換え後のベースになるパス (指定しなかったらhtaccessの物理パス)
+	#RewriteBase /
+
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteCond %{REQUEST_FILENAME} !-d 
+	# アクセスが来たら{RewriteBase}/index.php/...に書き換え。
+	RewriteRule ^([^/]+)/(.*)$ index.php?ver=$1&resource=$2 [QSA,NC,L]
+</IfModule>
