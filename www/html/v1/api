@@ -172,44 +172,46 @@ if(isset($_REQUEST['act'])){
 		
 	case 'printfeelist':
 	/**
-	 * 428HP 10秒見積もり(/price/js/estimate.js)
-	 */
+	* 428HPとstaff-tshirt 10秒見積もり(/price/js/estimate.js)
+	*/
 		$sheetsize = '1';
 		if(isset($_REQUEST['sheetsize'])){
 			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
 				$sheetsize = $_REQUEST['sheetsize'];
 			}
 		}
-		
+
 		$curdate = date('Y-m-d');
 		// 2017-05-25 00:00:00 から仕様変更
 		if (strtotime('2017-05-25 00:00:00') <= time()) {
-		$isSpecVer2 = true;
+			$isSpecVer2 = true;
 		} else {
-		$isSpecVer2 = false;
+			$isSpecVer2 = false;
 		}
 
 		$calc = new Calc($curdate, $sheetsize);
 
 		// インクジェット可能なアイテムIDを取得
 		$ids = $mst->itemIdOf(85, NULL, "tag");
-		
+
 		if(isset($_REQUEST['itemid'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
-			for($i=0; $i<count($_REQUEST['amount']); $i++){
+			for($i=0; $i<count($_REQUEST['itemid']); $i++){
 				$isInkjet = in_array($_REQUEST['itemid'][$i], $ids);
 				if(isset($_REQUEST['option'])){
-					$inkjetOption = array($_REQUEST['option'][$i]=>$_REQUEST['amount'][$i]);
+					$inkjetOption = array($_REQUEST['option']=>$_REQUEST['amount']);
 				}else{
-					$inkjetOption = array($_REQUEST['amount'][$i]);
+					$inkjetOption = array($_REQUEST['amount']);
 				}
-				$args[$_REQUEST['itemid'][$i]][] = array('itemid' => $_REQUEST['itemid'][$i],
-														 'amount' => $_REQUEST['amount'][$i],
-														 'ink' => $_REQUEST['ink'][$i],
-														 'pos' => $_REQUEST['pos'][$i],
-														 'size' => $_REQUEST['size'][$i],
-														 'inkjet' => $isInkjet,
-														 'option' => $inkjetOption
-														);
+				for ($p=0; $p<count($_REQUEST['ink']); $p++) {
+					$args[$_REQUEST['itemid'][$i]][] = array('itemid' => $_REQUEST['itemid'][$i],
+															 'amount' => $_REQUEST['amount'],
+															 'ink' => $_REQUEST['ink'][$p],
+															 'pos' => $_REQUEST['pos'][$p],
+															 'size' => $_REQUEST['size'],
+															 'inkjet' => $isInkjet,
+															 'option' => $inkjetOption
+															);
+				}
 			}
 			if (isSpecVer2) {
 				foreach($args as $itemid=>$val){
