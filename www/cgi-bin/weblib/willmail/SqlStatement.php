@@ -4,7 +4,7 @@
  * @package kintone
  * @author (c) 2014 ks.desk@gmail.com
  */
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/weblib/DbConnection.php';
+require_once dirname(__FILE__).'/../DbConnection.php';
 
 class SqlStatement extends DbConnection
 {

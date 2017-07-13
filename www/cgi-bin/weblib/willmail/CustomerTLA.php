@@ -6,8 +6,8 @@
  * @author (c) 2014 ks.desk@gmail.com
  */
 
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/weblib/willmail/proparty.php';
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/weblib/willmail/Customer.php';
+require_once dirname(__FILE__).'/property.php';
+require_once dirname(__FILE__).'/Customer.php';
 
 class CustomerTLA extends Customer
 {
@@ -170,7 +170,9 @@ class CustomerTLA extends Customer
 						} else {
 							$listRepeat[$recordCount][$printCode] += 1;
 						}
-						$listRepeat[$recordCount]['customer_num'] = $tmp[$i]['customre_num'];
+						if (!empty($tmp[$i]['customre_num'])) {
+							$listRepeat[$recordCount]['customer_num'] = $tmp[$i]['customre_num'];
+						}
 						$listRepeat[$recordCount]['express'] = $tmp[$i]['express'];
 						if (!empty($schedule2)) $listRepeat[$recordCount]['recent_order'] = $schedule2;
 						if (!empty($schedule1)) $listRepeat[$recordCount]['schedule1'] = $schedule1;

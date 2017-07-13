@@ -5,9 +5,9 @@
  * @author (c) 2014 ks.desk@gmail.com
  */
 ini_set('memory_limit', '1024M');
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/weblib/willmail/SqlStatement.php';
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/weblib/Http.php';
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/weblib/JSON.php';
+require_once dirname(__FILE__).'/SqlStatement.php';
+require_once dirname(__FILE__).'/../Http.php';
+require_once dirname(__FILE__).'/../JSON.php';
 
 abstract class Customer extends SqlStatement
 {
