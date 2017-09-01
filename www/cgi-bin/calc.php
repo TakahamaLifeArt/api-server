@@ -58,6 +58,7 @@ class Calc extends Master {
 	
 	/**
 	*	Webサイトからのリクエストで、シルクとデジタル転写とインクジェットで最安のプリント代合計を返す
+	*	デジ転とインクジェットのデザインサイズは{0:大}で固定。タオルのシルクプリントは{2:スーパージャンボ版}で固定。
 	*	@param {array} data [アイテムID、枚数、インク色数、プリント位置、デザインサイズ、インクジェットオプション[0(淡色):枚数,1(濃色):枚数]、インクジェット[1:可,0:不可]]　
 	*						[itemid, amount, ink, pos, size, option, inkjet][...]
 	*
@@ -75,9 +76,9 @@ class Calc extends Master {
 			}
 			$itemLen = count($itemAmount);
 			
-			// 枚数レンジ分類とシルク同版分類を取得
-			$sql = 'SELECT id, item_group1_id, item_group2_id FROM item
-				 where id in('.implode( ' , ', array_fill(0, $itemLen, '?') ).') and itemapply<=? and itemdate>?';
+			// 枚数レンジ分類、シルク同版分類、カテゴリーを取得
+			$sql = 'SELECT item_id, item_code, item_group1_id, item_group2_id, category_id FROM item inner join catalog on item.id=item_id';
+			$sql .= ' where item.id in('.implode( ' , ', array_fill(0, $itemLen, '?') ).') and lineup=1 and lineup=1 and itemapply<=? and itemdate>? group by item.id';
 			$stmt = $this->conn->prepare($sql);
 			$marker = '';
 			$arr = array();
@@ -100,8 +101,10 @@ class Calc extends Master {
 			if (empty($r)) throw new Exception();
 			$recLen = count($r);
 			for ($i=0; $i<$recLen; $i++) {
-				$group1[$r[$i]['id']] = $r[$i]['item_group1_id'];		// 枚数レンジ分類
-				$group2[$r[$i]['id']] = $r[$i]['item_group2_id'];		// シルク同版分類
+				$group1[$r[$i]['item_id']] = $r[$i]['item_group1_id'];		// 枚数レンジ分類
+				$group2[$r[$i]['item_id']] = $r[$i]['item_group2_id'];		// シルク同版分類
+				$category[$r[$i]['item_id']] = $r[$i]['category_id'];		// カテゴリー
+				$code[$r[$i]['item_id']] = $r[$i]['item_code'];				// アイテムコード
 			}
 			
 			// パラメータを整形
@@ -109,6 +112,11 @@ class Calc extends Master {
 			$param = array();
 			for ($i=0; $i<$len; $i++) {
 				$v = $args[$i];
+				// タオルの場合はスーパージャンボ版にする
+				// 但し519-htと540-hktは除く
+				if ($category[$v['itemid']]==8 && ($code[$v['itemid']]!='519-ht' && $code[$v['itemid']]!='540-hkt')) {
+					$v['size'] = 2;
+				}
 				$sect = $v['size'].'-'.$v['ink'];
 				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['ids'][$v['itemid']] = $itemAmount[$v['itemid']];
 				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['vol'] += $v['amount'];
@@ -151,7 +159,7 @@ class Calc extends Master {
 						}
 						
 						// シルク
-						$tmp['silk'] = $this->calcSilkPrintFee($val['vol'], $val['ink'], $val['ids'], 0, $val['repeatSilk']);
+						$tmp['silk'] = $this->calcSilkPrintFee($val['vol'], $val['ink'], $val['ids'], $val['size'], $val['repeatSilk']);
 						
 						// シルクの版代を一時集計、同版分類が同じで且つ枚数レンジ分類が違うアイテムに対応するため
 //						foreach ($tmp['plates'] as $g2Id=>$charge) {
@@ -174,7 +182,7 @@ class Calc extends Master {
 						}
 						
 						// デジタル転写
-						$tmp['digit'] = $this->calcDigitFee($val['vol'], $val['size'], $val['ids'], $val['repeat']);
+						$tmp['digit'] = $this->calcDigitFee($val['vol'], 0, $val['ids'], $val['repeat']);
 						// デジタル転写の版代をアイテム毎に按分
 //						if (!empty($tmp['plates'])) {
 //							$per = $tmp['plates'] / $val['vol'];
@@ -187,7 +195,7 @@ class Calc extends Master {
 						if ($val['inkjet'] === true) {
 							for ($i=0; $i<2; $i++) {
 								if (empty($val['opt'][$i])) continue;
-								$dat = $this->calcInkjetFee($i, $val['opt'][$i], $val['size'], $val['ids']);
+								$dat = $this->calcInkjetFee($i, $val['opt'][$i], 0, $val['ids']);
 								if (empty($tmp['inkjet'])) {
 									$tmp['inkjet'] = $dat;
 								} else {
