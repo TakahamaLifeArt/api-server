@@ -98,6 +98,10 @@ class Followmail {
 
 
 
+exit;
+
+
+
 // お届日（schedule4）を基準
 $inst = new Followmail();
 $jd = new japaneseDate();
