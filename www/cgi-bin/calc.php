@@ -112,12 +112,12 @@ class Calc extends Master {
 			$param = array();
 			for ($i=0; $i<$len; $i++) {
 				$v = $args[$i];
+				$sect = $v['size'].'-'.$v['ink'];
 				// タオルの場合はスーパージャンボ版にする
 				// 但し519-htと540-hktは除く
 				if ($category[$v['itemid']]==8 && ($code[$v['itemid']]!='519-ht' && $code[$v['itemid']]!='540-hkt')) {
 					$v['size'] = 2;
 				}
-				$sect = $v['size'].'-'.$v['ink'];
 				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['ids'][$v['itemid']] = $itemAmount[$v['itemid']];
 				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['vol'] += $v['amount'];
 				$param[ $v['pos'] ][$sect][ $group1[$v['itemid']] ]['ink'] = $v['ink'];
