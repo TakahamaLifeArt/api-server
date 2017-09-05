@@ -345,8 +345,9 @@ if(isset($_REQUEST['act'])){
 				foreach ($_REQUEST as $key => $val) {
 					switch($key){
 						case 'start':
-						case 'end':					
-							$info[$key] = $mst->validdate($val);
+						case 'end':
+							if (!empty($val)) $val = $mst->validdate($val);
+							$info[$key] = $val;
 							break;
 						case 'notice':
 						case 'notice-ext':
