@@ -490,7 +490,7 @@ class Master{
 			$tax /= 100;
 			
 			if($mode=='code'){
-				$sql = sprintf("select category_key, item.id as item_id, item_name, item_code, size.id as size_id, size_name as size_from, count(catalog.id)-1 as colors, 
+				$sql = sprintf("select category_key, item.id as item_id, item_name, item_code, size.id as size_id, size_name as size_from, count(distinct(catalog.id))-1 as colors, 
 				truncate(price_1*margin_pvt*(1+".$tax.")+9,-1) as cost, item.printposition_id as pos_id, item_row, maker_id from 
 				 (((item inner join catalog on item.id=catalog.item_id) 
 				 inner join itemprice on item.id=itemprice.item_id) 
@@ -500,7 +500,7 @@ class Master{
 				 group by catalog.item_id, itemprice.size_from order by item_row, item.id, size.id", 
 				 $curdate, $curdate, $curdate, $curdate, $curdate, $curdate, $id);
 			}else if($mode=='tag'){
-				$sql = sprintf("select category_key, item.id as item_id, item_name, item_code, size.id as size_id, size_name as size_from, count(catalog.id)-1 as colors, 
+				$sql = sprintf("select category_key, item.id as item_id, item_name, item_code, size.id as size_id, size_name as size_from, count(distinct(catalog.id))-1 as colors, 
 				truncate(price_1*margin_pvt*(1+".$tax.")+9,-1) as cost, item.printposition_id as pos_id, item_row, maker_id from 
 				 ((((item inner join catalog on item.id=catalog.item_id) 
 				 inner join itemprice on item.id=itemprice.item_id) 
@@ -514,7 +514,7 @@ class Master{
 			// itemOfで使用
 				$sql = sprintf("select item.show_site,tag_order, tag_id, tag_name, tag_type, tagtype_key, category_key, category_name, item.id as item_id, item_name, item.item_code as item_code, size_from, size_name, 
 				truncate(price_1*margin_pvt*(1+".$tax.")+9,-1) as cost, truncate(price_maker_1*(1+".$tax.")+9,-1) as makercost, item.printposition_id as pos_id, 
-				item_row, maker_id, oz, count(catalog.id) as colors,
+				item_row, maker_id, oz, count(distinct(catalog.id)) as colors,
 				i_color_code, i_caption from 
 				 (((((((item inner join catalog on item.id=catalog.item_id) 
 				 inner join itemprice on item.id=itemprice.item_id) 
@@ -597,7 +597,7 @@ class Master{
 					 $sql .= ' group by item.id, itemprice.size_from, catalog.color_code order by item_row, item.id, size.id';
 				}
 			}else if(preg_match('/^[1-9][0-9]*$/', $mode)){
-				$sql = sprintf("select category_key, item.id as item_id, item_name, item.item_code as item_code, size.id as size_id, size_name as size_from, count(catalog.id)-1 as colors, 
+				$sql = sprintf("select category_key, item.id as item_id, item_name, item.item_code as item_code, size.id as size_id, size_name as size_from, count(distinct(catalog.id))-1 as colors, 
 				truncate(price_1*margin_pvt*(1+".$tax.")+9,-1) as cost, item.printposition_id as pos_id, item_row, maker_id,
 				 i_color_code, i_caption from 
 				 (((((item inner join catalog on item.id=catalog.item_id) 
@@ -611,7 +611,7 @@ class Master{
 				 group by item.id, itemprice.size_from order by item_row, item.id, size.id", 
 				 $curdate, $curdate, $curdate, $curdate, $curdate, $curdate, $id, $mode);
 			}else{
-				$sql = sprintf("select category_key, item.id as item_id, item_name, item.item_code as item_code, size.id as size_id, size_name as size_from, count(catalog.id)-1 as colors, 
+				$sql = sprintf("select category_key, item.id as item_id, item_name, item.item_code as item_code, size.id as size_id, size_name as size_from, count(distinct(catalog.id))-1 as colors, 
 				truncate(price_1*margin_pvt*(1+".$tax.")+9,-1) as cost, item.printposition_id as pos_id, item_row, maker_id, i_color_code, i_caption from 
 				 ((((item inner join catalog on item.id=catalog.item_id) 
 				 inner join (
