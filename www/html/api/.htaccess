@@ -1,0 +1,26 @@
+# <IfModule mod_rewrite.c>
+Options -Indexes
+
+# URL書き換えを許可
+RewriteEngine on
+
+# URL書き換え後のベースになるパス (指定しなかったらhtaccessの物理パス)
+#RewriteBase /
+
+# RewriteCond %{HTTP:Origin} (.+)
+# RewriteRule . - [E=CORS_ORIGIN:%1]
+# Header set Access-Control-Allow-Origin %{CORS_ORIGIN}e env=CORS_ORIGIN
+
+# Header set Access-Control-Allow-Headers "X-Doozor-Access-Token"
+# Header set Access-Control-Allow-Methods: "GET,POST,HEAD,OPTIONS"
+
+# Header set Access-Control-Allow-Credentials true
+
+# RewriteCond %{HTTP:Authorization} .
+# RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d 
+# ~~にアクセスが来たら{RewriteBase}/index.php/~~に書き換え。
+RewriteRule ^([^/]+)/(.*)$ index.php?ver=$1&resource=$2 [QSA,NC,L]
+# </IfModule>
