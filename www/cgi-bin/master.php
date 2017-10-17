@@ -372,7 +372,7 @@ class Master{
 			if(empty($id)) return null;
 			$conn = db_connect();
 			$curdate = $this->validdate($curdate);
-			$sql = sprintf("select category_key,category_name,item_code,item_name,concat(item_code,'_',color_code) as code,color_name,size_from,size_name,printposition_id,maker_id from 
+			$sql = sprintf("select category_id,category_key,category_name,item_code,item_name,concat(item_code,'_',color_code) as code,color_name,size_from,size_name,printposition_id,maker_id from 
 			((((item inner join catalog on item.id=catalog.item_id) 
 			inner join itemcolor on catalog.color_id=itemcolor.id) 
 			inner join category on catalog.category_id=category.id) 
@@ -389,7 +389,7 @@ class Master{
 			}
 			mysqli_data_seek($result, 0);
 			$row = mysqli_fetch_assoc($result);
-			$res = array('name'=>array($row['item_code']=>$row['item_name']), 'category'=>array($row['category_key']=>$row['category_name']), 'code'=>$tmp1, 'size'=>$tmp2, 'ppid'=>$row['printposition_id'], 'maker'=>$row['maker_id']);
+			$res = array('id'=>$row['category_id'], 'name'=>array($row['item_code']=>$row['item_name']), 'category'=>array($row['category_key']=>$row['category_name']), 'code'=>$tmp1, 'size'=>$tmp2, 'ppid'=>$row['printposition_id'], 'maker'=>$row['maker_id']);
 		}catch(Exception $e){
 			$res = null;
 		}
