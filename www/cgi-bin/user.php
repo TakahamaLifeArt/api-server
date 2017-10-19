@@ -495,6 +495,7 @@ class User {
 	public static function updatePass($args) {
 		try{
 			//$conn = self::db_connect();
+			if (empty($args['userid'])) throw new Exception();
 			$conn = db_connect();
 			$pass = self::getSha1Pass($args['pass']);
 			if (empty($args['temp'])) {
