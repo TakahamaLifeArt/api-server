@@ -76,13 +76,13 @@ class Pendingorder {
 				$mail_contents .= "（TEL）03-5670-0787\n";
 				$mail_contents .= "（FAX）03-5670-0730\n";
 				$mail_contents .= "E-mail："._INFO_EMAIL."\n";
-				$mail_contents .= "URL：http://www.takahama428.com\n";
+				$mail_contents .= "URL：https://www.takahama428.com\n";
 				
 				
 				
 				// メール送信
 				require_once dirname(__FILE__).'/http.php';
-				$http = new HTTP('http://www.takahama428.com/v1/via_mailer.php');
+				$http = new HTTP('https://www.takahama428.com/v1/via_mailer.php');
 				$param = array(
 					'mail_subject'=>$mail_subject,
 					'mail_contents'=>$mail_contents,

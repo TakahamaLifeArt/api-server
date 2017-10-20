@@ -83,10 +83,10 @@ class Exwmail extends ConnDB {
 				$mail_contents .= "　Phone ：　　"._OFFICE_TEL."\n";
 				$mail_contents .= "　Fax   ：　　"._OFFICE_FAX."\n";
 				$mail_contents .= "　E-Mail：　　"._INFO_EMAIL."\n";
-				$mail_contents .= "　Web site：　http://www.takahama428.com/\n";
+				$mail_contents .= "　Web site：　https://www.takahama428.com/\n";
 				$mail_contents .= "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
 				
-				$http = new HTTP('http://www.takahama428.com/v1/via_mailer.php');
+				$http = new HTTP('https://www.takahama428.com/v1/via_mailer.php');
 				$param = array(
 					'mail_subject'=>$mail_subject,
 					'mail_contents'=>$mail_contents,
