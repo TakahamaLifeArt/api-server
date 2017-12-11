@@ -24,8 +24,11 @@ class Master{
  *	itemOf				指定したタグ及びカテゴリのアイテム一覧ページ情報を返す
  *	itemIdOf			指定したタグ及びカテゴリのアイテムIDを返す（private, itemOfから呼出す）
  *	getTagInfo			アイテムタグ情報を返す
+ *	getItemTag			タグ一覧を返す
  *	getItemPageInfo		商品一覧で使用する基本情報を返す（サイズ数、カラー数、最安価格）
- * 	getItemdetail		商品詳細ページ情報
+ *	getItemdetail		商品詳細ページ情報
+ *	getItemMeasure		寸法情報
+ *	getPrintMethod		プリント方法情報
  *	getItemStock		在庫数を返す
  *	getSizename			サイズIDからサイズ名を返す
  *	getItemID			アイテムコードからアイテムIDを返す
@@ -42,7 +45,7 @@ class Master{
  * 	(private)
  *	salestax			商品単価に使用する消費税率を返す
  *	rename_size			サイズ名を変換する
- */	
+ */
 	
 	
 	/**
@@ -400,7 +403,6 @@ class Master{
 	}
 	
 	
-	
 	/**
 	*	商品のカラーを指定してサイズごとの価格を返す
 	*	@id				アイテムID
@@ -429,8 +431,8 @@ class Master{
 			$rec = mysqli_fetch_assoc($result);
 			if($rec['color_id']==59){
 				$fldPrice='price_1';
-			}else if($rec['color_id']==42 && ($id==112 || $id==212)){
-				$fldPrice='price_1';
+//			}else if($rec['color_id']==42 && ($id==112 || $id==212)){
+//				$fldPrice='price_1';
 			}else{
 				$fldPrice='price_0';
 				
@@ -512,24 +514,37 @@ class Master{
 				 $curdate, $curdate, $curdate, $curdate, $curdate, $curdate, $id);
 			}else if(is_array($id)){
 			// itemOfで使用
-				$sql = sprintf("select item.show_site,tag_order, tag_id, tag_name, tag_type, tagtype_key, category_key, category_name, item.id as item_id, item_name, item.item_code as item_code, size_from, size_name, 
+				$sql = sprintf("select item.show_site, category_key, category_name, item.id as item_id, item_name, item.item_code as item_code, size_from, size_name, 
 				truncate(price_1*margin_pvt*(1+".$tax.")+9,-1) as cost, truncate(price_maker_1*(1+".$tax.")+9,-1) as makercost, item.printposition_id as pos_id, 
 				item_row, maker_id, oz, count(distinct(catalog.id)) as colors,
 				i_color_code, i_caption from 
-				 (((((((item inner join catalog on item.id=catalog.item_id) 
+				 (((((item inner join catalog on item.id=catalog.item_id) 
 				 inner join itemprice on item.id=itemprice.item_id) 
 				 inner join category on catalog.category_id=category.id)
 				 inner join size on size_from=size.id)
 				 left join itemdetail on item.item_code=itemdetail.item_code)
-				 left join itemtag on item.id=itemtag.tag_itemid)
-				 left join tags on itemtag.tag_id=tags.tagid)
-				 left join tagtype on tags.tag_type=tagtype.tagtypeid
 				 where show_site like "."'%%".$_REQUEST['show_site']."%%'"." 
 				 and lineup=1 and color_lineup=1 and size_lineup=1 and catalog.color_code!='000' and catalogapply<='%s' and catalogdate>'%s' and 
 				 itemapply<='%s' and itemdate>'%s' and itempriceapply<='%s' and itempricedate>'%s'",
 				 $curdate, $curdate, $curdate, $curdate, $curdate, $curdate);
 				$sql .= " and item.id in (".implode(',', $id).")";
-				$sql .= " group by item.id, itemprice.size_from, tag_id order by item_row, item.id, size_from, tag_order";
+				$sql .= " group by item.id, size_from order by item_row, item.id, size_from";
+			} else if($mode=='id') {
+				// itemOfでカテゴリID指定の場合
+				$sql = sprintf("select item.show_site, category_key, category_name, item.id as item_id, item_name, item.item_code as item_code, size_from, size_name, 
+				truncate(price_1*margin_pvt*(1+".$tax.")+9,-1) as cost, truncate(price_maker_1*(1+".$tax.")+9,-1) as makercost, item.printposition_id as pos_id, 
+				item_row, maker_id, oz, count(distinct(catalog.id)) as colors,
+				i_color_code, i_caption from 
+				 (((((item inner join catalog on item.id=catalog.item_id) 
+				 inner join itemprice on item.id=itemprice.item_id) 
+				 inner join category on catalog.category_id=category.id)
+				 inner join size on size_from=size.id)
+				 left join itemdetail on item.item_code=itemdetail.item_code)
+				 where show_site like "."'%%".$_REQUEST['show_site']."%%'"." 
+				 and lineup=1 and color_lineup=1 and size_lineup=1 and catalog.color_code!='000' and catalogapply<='%s' and catalogdate>'%s' and 
+				 itemapply<='%s' and itemdate>'%s' and itempriceapply<='%s' and itempricedate>'%s' and category_id=%d",
+				 $curdate, $curdate, $curdate, $curdate, $curdate, $curdate, $id);
+				$sql .= " group by item.id, size_from order by item_row, item.id, size_from";
 			}else if(is_array($mode)){
 				if( !empty($mode[2]) && $mode[2]==4 && !empty($mode[1]) ){
 				/*
@@ -615,8 +630,8 @@ class Master{
 				truncate(price_1*margin_pvt*(1+".$tax.")+9,-1) as cost, item.printposition_id as pos_id, item_row, maker_id, i_color_code, i_caption from 
 				 ((((item inner join catalog on item.id=catalog.item_id) 
 				 inner join (
-select item_id,size_from,size_to,price_1,margin_pvt,
-size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_from,size_to,price_1,margin_pvt,size_lineup,itempriceapply,itempricedate ) as itemprice_temp  on item.id=itemprice_temp.item_id) 
+				 select item_id,size_from,size_to,price_1,margin_pvt,
+				 size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_from,size_to,price_1,margin_pvt,size_lineup,itempriceapply,itempricedate ) as itemprice_temp  on item.id=itemprice_temp.item_id) 
 				 inner join category on catalog.category_id=category.id)
 				 inner join size on itemprice_temp.size_from=size.id) 
 				 left join itemdetail on item.item_code=itemdetail.item_code 
@@ -627,8 +642,8 @@ size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_fr
 			}
 			
 			$result = exe_sql($conn, $sql);
-			if(is_array($id)){	// itemOf で使用
-				$brandTagId = array(43,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70);
+			if(is_array($id) || $mode=='id'){	// itemOf で使用
+//				$brandTagId = array(43,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70);
 				$i = -1;
 				while($r = mysqli_fetch_assoc($result)){
 					if(empty($res) || $res[$i]['item_name']!=$r['item_name']){
@@ -646,6 +661,13 @@ size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_fr
 						$r['sizename_to'] = $r['size_name'];
 						$r['sizecount'] = 1;
 						$r['brandtag_id'] = "";
+						
+						// itemreview
+						$sql = sprintf("select count(*) as reviews from itemreview where item_id=%d", $r['item_id']);
+						$rev = exe_sql($conn, $sql);
+						$review = mysqli_fetch_assoc($rev);
+						$r['reviews'] = $review['reviews'];
+						
 						$res[++$i] = $r;
 					}else{
 						if(empty($tmp[$r['size_from']])){
@@ -655,18 +677,18 @@ size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_fr
 						}
 					}
 					
-					if(in_array($r['tag_id'], $brandTagId)){
-						$res[$i]['brandtag_id'] = $r['tag_id'];
-					}
-					
-					if($r['tag_type']>0){
-						$res[$i]['tag'][$r['tag_id']] = array("tagtype"=>$r['tag_type'], 
-															  "tagtype_key"=>$r['tagtype_key'],
-															  "tagname"=>$r['tag_name'],
-															  "tagorder"=>$r['tag_order'],
-															  "tagid"=>$r['tag_id'],
-															  );
-					}
+//					if(in_array($r['tag_id'], $brandTagId)){
+//						$res[$i]['brandtag_id'] = $r['tag_id'];
+//					}
+//
+//					if($r['tag_type']>0){
+//						$res[$i]['tag'][$r['tag_id']] = array("tagtype"=>$r['tag_type'], 
+//															  "tagtype_key"=>$r['tagtype_key'],
+//															  "tagname"=>$r['tag_name'],
+//															  "tagorder"=>$r['tag_order'],
+//															  "tagid"=>$r['tag_id'],
+//															  );
+//					}
 				}
 				if(!empty($sizeHash)){
 					usort($sizeHash, array('Master', 'sort_size'));
@@ -707,6 +729,13 @@ size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_fr
 					if($res[$i]['item_name']!=$r['item_name']){
 						$i++;
 						$r['size_to'] = $r['size_from'];
+						
+						// itemreview
+						$sql = sprintf("select count(*) as reviews from itemreview where item_id=%d", $r['item_id']);
+						$rev = exe_sql($conn, $sql);
+						$review = mysqli_fetch_assoc($rev);
+						$r['reviews'] = $review['reviews'];
+						
 						$res[$i] = $r;
 					}else{
 						$res[$i]['size_to'] = $r['size_from'];
@@ -756,24 +785,28 @@ size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_fr
 				}
 			}else{
 				if(empty($tag)){
-					$res = $this->itemIdOf($id, $tag, $mode);
+					if ($mode!="category") {
+						$res = $this->itemIdOf($id, $tag, $mode);
+					}
 				}else{
 					// 指定タグ全てが共通部分となるアイテムの集合
 					$len = count($tag);
-					if($mode=="category"){
-						for($t=0; $t<$len; $t++){
-							$tmp = $this->itemIdOf($id, $tag[$t], $mode, $tmp);
-						}
-					}else{
+					if($mode!="category"){
 						$tmp = $this->itemIdOf($id, null, $mode, $tmp);
 						for($t=0; $t<$len; $t++){
 							$tmp = $this->itemIdOf($tag[$t], null, $mode, $tmp);
+						}
+					}else{
+						for($t=0; $t<$len; $t++){
+							$tmp = $this->itemIdOf($id, $tag[$t], $mode, $tmp);
 						}
 					}
 					$res = $tmp;
 				}
 				
-				if (!empty($res) && is_array($res)) {
+				if (empty($tag) && $mode=="category") {
+					$res = $this->getCategories($id);
+				} else if (!empty($res) && is_array($res)) {
 					$res = $this->getCategories($res);
 				}
 			}
@@ -864,6 +897,93 @@ size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_fr
 		}
 		mysqli_close($conn);
 		
+		return $res;
+	}
+	
+	
+	
+	/**
+	 * タグの一覧を返す
+	 * @id		カテゴリーID | アイテムID | タグID
+	 * @mode	category:カテゴリーID(default), item:アイテムID, tag:タグID
+	 * @tag		アイテムタグIDの配列
+	 * @return タグ情報の配列
+	 */
+	public function getItemTag($id, $mode='category', $tag=array()){
+		try {
+			$conn = db_connect();
+			$sql = "select tag_itemid, tag_id, tag_name, tag_type, tag_order, tagtype_key, tagtype_name from ";
+			
+			$l = count($tag);
+			if ($l>0) {
+				$cnt = 0;
+				for ($i=0; $i<$l; $i++) {
+					if (!ctype_digit(strval($tag[$i]))) {
+						unset($tag[$i]);	// １０進数の数値以外を削除
+						$cnt++;
+					}
+				}
+				if ($cnt>0) {
+					$l -= $cnt;
+					if ($l>0) {
+						array_values($tag);
+						$sql .= implode('', array_fill(0, $l, '(') );
+					}
+				} else {
+					$sql .= implode('', array_fill(0, $l, '(') );
+				}
+			}
+			
+			if ($mode=='category') {
+				$sql .= "(((itemtag
+					 inner join item on tag_itemid=item.id)
+					 inner join catalog on item.id=catalog.item_id)";
+			} else if ($mode=='tag') {
+				$sql .= "((itemtag
+					 inner join (select tag_itemid as tmpid, itemdate from itemtag inner join item on tag_itemid=item.id where tag_id = %d) as tmp on itemtag.tag_itemid=tmpid)";
+			} else {
+				$sql .= "((itemtag inner join item on tag_itemid=item.id)";
+			}
+			
+			for ($i=0; $i<$l; $i++) {
+				$sql .= " inner join (select tag_itemid as tmp{$i}id from itemtag where tag_id = %d) as tmp{$i} on itemtag.tag_itemid=tmp{$i}id)";
+			}
+			
+			$sql .= " inner join tags on itemtag.tag_id=tags.tagid)
+				 inner join tagtype on tags.tag_type=tagtype.tagtypeid
+				 where";
+			
+			if ($mode=='category') {
+				$sql .= " category_id = %d and itemdate='3000-01-01'";
+			} else if ($mode=='tag') {
+				$sql .= " tmp.itemdate='3000-01-01'";
+			} else {
+				$sql .= " tag_itemid = %d and itemdate='3000-01-01'";
+			}
+			
+			$sql .= " group by tag_id order by tag_order";
+			
+			if ($l>0) {
+				if ($mode!='tag') {
+//					array_push($tag, $id);
+					$tag[] = $id;
+				} else {
+					array_unshift($tag, $id);
+				}
+				$sql = vsprintf($sql, $tag);
+			} else {
+				$sql = sprintf($sql, $id);;
+			}
+			
+			$result = exe_sql($conn, $sql);
+			while ($rec = mysqli_fetch_assoc($result)) {
+				$res[] = $rec;
+			}
+		} catch(Exception $e) {
+			$res = null;
+		}
+		mysqli_close($conn);
+
 		return $res;
 	}
 	
@@ -965,6 +1085,26 @@ size_lineup,itempriceapply,itempricedate from itemprice GROUP by item_id,size_fr
 		return $res;
 	}
 	
+	
+	/**
+	 * プリント方法
+	 *
+	 * @return {array} プリント方法のコードをキーにしたプリント方法名のハッシュ
+	 */
+	public function getPrintMethod(){
+		try{
+			$conn = db_connect();
+			$result = exe_sql($conn, 'select printtypeid as id, print_key as code, print_name as name from printtype');
+			while ($rec = mysqli_fetch_assoc($result)) {
+				$res[] = $rec;
+			}
+		}catch(Exception $e){
+			$res = null;
+		}
+		mysqli_close($conn);
+
+		return $res;
+	}
 	
 	
 	/**
