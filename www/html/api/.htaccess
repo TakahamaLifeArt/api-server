@@ -1,6 +1,5 @@
-# <IfModule mod_rewrite.c>
 Options -Indexes
-
+<IfModule mod_rewrite.c>
 # URL書き換えを許可
 RewriteEngine on
 
@@ -19,8 +18,8 @@ RewriteEngine on
 # RewriteCond %{HTTP:Authorization} .
 # RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
+RewriteRule ^index\.php$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d 
-# ~~にアクセスが来たら{RewriteBase}/index.php/~~に書き換え。
 RewriteRule ^([^/]+)/(.*)$ index.php?ver=$1&resource=$2 [QSA,NC,L]
-# </IfModule>
+</IfModule>

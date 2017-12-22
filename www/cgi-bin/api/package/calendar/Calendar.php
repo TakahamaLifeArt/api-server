@@ -7,11 +7,11 @@
 declare(strict_types=1);
 namespace package\calendar;
 abstract class Calendar {
-	protected $year = 0;			// 当該年
-	protected $month = 0;			// 当該月
-	protected $firstDay = null;		// １日の曜日(0:sunday, 1:monday, ..., 6:saturday)
-	protected $lastDay = null;		// 月末の曜日(0:sunday, 1:monday, ..., 6:saturday)
-	protected $days = null;			// 当該月の日数
+	protected $_year = 0;			// 当該年
+	protected $_month = 0;			// 当該月
+	protected $_firstDay = null;	// １日の曜日(0:sunday, 1:monday, ..., 6:saturday)
+	protected $_lastDay = null;		// 月末の曜日(0:sunday, 1:monday, ..., 6:saturday)
+	protected $_days = null;		// 当該月の日数
 
 	/**
 	 * constructor
@@ -24,11 +24,11 @@ abstract class Calendar {
 			$month = (int)date('m');
 		}
 		$timestamp = mktime(0, 0, 0, $month, 1, $year);
-		$this->year = $year;
-		$this->month = $month;
-		$this->firstDay = (int)date('w', $timestamp);
-		$this->lastDay = (int)date('w', mktime(0, 0, 0, $month+1, 0, $year));
-		$this->days = (int)date('t', $timestamp);
+		$this->_year = $year;
+		$this->_month = $month;
+		$this->_firstDay = (int)date('w', $timestamp);
+		$this->_lastDay = (int)date('w', mktime(0, 0, 0, $month+1, 0, $year));
+		$this->_days = (int)date('t', $timestamp);
 	}
 
 	/**

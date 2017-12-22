@@ -60,7 +60,8 @@ try {
 					$me = array();
 				} else {
 					$me = $param['me'];
-					$me['holiday'] = json_decode($me['holiday']);
+					$me['dayOff'] = json_decode($me['dayOff']);
+					$me['holiday'] = json_decode($me['holiday'], true);
 				}
 				$res = Composer::showCalendar($y, $m, $me);
 				if (is_string($res)) {

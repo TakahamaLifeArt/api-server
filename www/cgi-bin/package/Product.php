@@ -11,9 +11,10 @@
  * getItemTag		タグ名の一覧
  * getItemColor		商品カラー
  * getSizePrice		サイズ展開と単価
+ * getItemPrice		サイズ毎の単価、量販単価に対応
  * getPrintposition	プリント位置画像のパス情報とプリント個所名
  * getItemDetail	商品詳細情報
- * salesTax			商品単価に使用する消費税率を返す
+ * salesTax			消費税率を返す
  * validDate		日付の妥当性を確認
  */
 declare(strict_types=1);
@@ -61,17 +62,24 @@ class Product {
 	 * カテゴリー{@code $id}又はアイテムID{@code $ary}のどちらかを指定する
 	 * @param {int} id カテゴリID(default:0)
 	 * @param {array} ary アイテムID
+	 * @param {string} sort 表示順を指定、popular|''(人気), low(高価), high(廉価), desc(レビュー数)
 	 * @return {array} 各アイテムのデータ 
 	 * [category_key, category_name, item_id, item_name, item_code, cost, pos_id, maker_id, 
 	 *  oz, colors, i_color_code, i_caption, reviews, sizename_from, sizename_to, range_id, screen_id]
 	 */
-	private function getItemList(int $id=0, array $ary=array()): array {
+	private function getItemList(int $id=0, array $ary=array(), string $sort='popular'): array {
 		try{
 			if(empty($id) && count($ary)==0) throw new Exception();
 
-			$tax = $this->salesTax();
-			$tax /= 100;
-
+			// 消費税率
+			$tax = 0;
+			
+			// 内税の場合
+			if (_TAX_CLASS == 2) {
+				$tax = $this->salesTax();
+				$tax /= 100;
+			}
+			
 			$query = "select category_key, category_name, item.id as item_id, item_name, item.item_code as item_code, 
 			min(truncate(price_1*margin_pvt*(1+".$tax.")+9,-1)) as cost, item.printposition_id as pos_id, 
 			item_row, maker_id, oz, count(distinct(catalog.id)) as colors, i_color_code, i_caption, 
@@ -94,7 +102,15 @@ class Product {
 				$marker .= 'i';
 				array_push($param, $id);
 			}
-			$query .= " group by item.id order by item_row";
+			$query .= " group by item.id";
+			
+			if ($sort == 'low') {
+				$query .= " order by cost asc";
+			} else if ($sort == 'high') {
+				$query .= " order by cost desc";
+			} else if ($sort != 'desc') {
+				$query .= " order by item_row";
+			}
 
 			$res = $this->_sql->prepared($query, $marker, $param);
 			$l = count($res);
@@ -120,6 +136,13 @@ class Product {
 				$res[$i]['sizename_from'] = $size[0];
 				$res[$i]['sizename_to'] = $size[1] ?? $size[0];	// NULL合体演算子
 			}
+			
+			if ($sort=='desc') {
+				for($i=0; $i<count($res); $i++){
+					$a[$i] = $res[$i]['reviews'];
+				}
+				array_multisort($a, SORT_DESC, $res);
+			}
 		}catch(Exception $e){
 			$res = array();
 		}
@@ -131,14 +154,15 @@ class Product {
 	 * カテゴリー内のアイテムを対象に商品タグによる絞り込み
 	 * @param {int} id カテゴリーID
 	 * @param {array} tag タグID
+	 * @param {string} sort 表示順を指定、popular|null(人気), low(高価), high(廉価), desc(レビュー数)
 	 * @return {array} 各アイテム情報, getItemListを呼び出す
 	 */
-	public function itemOfCategory(int $id, array $tag=array()): array {
+	public function itemOfCategory(int $id, array $tag=array(), string $sort='popular'): array {
 		try {
 			if(empty($id)) throw new Exception();
 			$l = count($tag);
 			if ($l==0) {
-				$res = $this->getItemList($id);
+				$res = $this->getItemList($id, [], $sort);
 				return $res;
 			}
 			$query = "select item.id as itemid from ".implode('', array_fill(0, $l, '(') );
@@ -154,7 +178,7 @@ class Product {
 			$param = array_merge($tag, array($this->curDate, $this->curDate));
 			$rec = $this->_sql->prepared($query, $marker, $param);
 			$ids = array_column($rec, 'itemid');
-			$res = $this->getItemList(0, $ids);
+			$res = $this->getItemList(0, $ids, $sort);
 		} catch (Exception $e) {
 			$res = array();
 		}
@@ -165,9 +189,10 @@ class Product {
 	/**
 	 * アイテムを商品タグで絞り込み
 	 * @param {array} tag タグID
+	 * @param {string} sort 表示順を指定、popular|null(人気), low(高価), high(廉価), desc(レビュー数)
 	 * @return {array} 各アイテム情報, getItemListを呼び出す
 	 */
-	public function itemOfTag(array $tag): array {
+	public function itemOfTag(array $tag, string $sort='popular'): array {
 		try {
 			if(empty($tag)) throw new Exception();
 			$l = count($tag);
@@ -183,7 +208,7 @@ class Product {
 			$param = array_merge($tag, array($this->curDate, $this->curDate));
 			$rec = $this->_sql->prepared($query, $marker, $param);
 			$ids = array_column($rec, 'itemid');
-			$res = $this->getItemList(0, $ids);
+			$res = $this->getItemList(0, $ids, $sort);
 		} catch (Exception $e) {
 			$res = array($e->getMessage());
 		}
@@ -225,12 +250,14 @@ class Product {
 	/**
 	 * 商品カラー
 	 * @param {int} id アイテムID
-	 * @return {array} [id:color_id, code:color_code, name:color_name]
+	 * @return {array} [id:color_id, code:color_code, name:colo_name, category:category_key]
 	 */
 	public function getItemColor(int $id): array {
 		try{
 			if(empty($id)) throw new Exception();
-			$query = "select color_id as id, color_code as code, color_name as name from catalog inner join itemcolor on color_id=itemcolor.id 
+			$query = "select color_id as id, color_code as code, color_name as name, category_key as category from (catalog 
+			inner join category on catalog.category_id=category.id)
+			inner join itemcolor on color_id=itemcolor.id 
 			where item_id=? and catalogapply<=? and catalogdate>? and color_lineup=1 order by color_code";
 			$res = $this->_sql->prepared($query, "iss", array($id, $this->curDate, $this->curDate));
 		}catch(Exception $e){
@@ -241,12 +268,11 @@ class Product {
 	}
 	
 	
-	
 	/**
 	 * サイズ展開と単価
 	 * @param {int} id アイテムID
 	 * @param {string} color カラーコード
-	 * @return {array} [master_id, id:size_id, name:size_na me, cost:cost, series:size_series, stock:stock_volume,
+	 * @return {array} [master_id, id:size_id, name:size_name, cost:cost, series:size_series, stock:stock_volume,
 	 * 					printarea_1,printarea_2,printarea_3,printarea_4,printarea_5,printarea_6,printarea_7]
 	 *					costは最安単価
 	 */
@@ -254,8 +280,14 @@ class Product {
 		try{
 			if(empty($id)) throw new Exception();
 
-			$tax = $this->salesTax();
-			$tax /= 100;
+			// 消費税率
+			$tax = 0;
+
+			// 内税の場合
+			if (_TAX_CLASS == 2) {
+				$tax = $this->salesTax();
+				$tax /= 100;
+			}
 
 			$query = "select catalog.id as master_id, size.id as id, size_name as name, series, stock_volume as stock, 
 			(case when color_id=59 then truncate(price_1*margin_pvt*(1+".$tax.")+9,-1) else truncate(price_0*margin_pvt*(1+".$tax.")+9,-1) end) as cost, 
@@ -278,6 +310,67 @@ class Product {
 		return $res;
 	}
 	
+	
+	/**
+	 * サイズ毎の商品価格
+	 * @param {int} id アイテムID
+	 * @param {string} colorCode アイテムカラーコード
+	 * @param {int} amount 量販単価の判別 0-149枚、150-299枚、300枚以上
+	 * @return {array} [id:size_id, name:size_name, cost:cost]
+	 */
+	public function getItemPrice(int $id, string $colorCode, int $amount=0): array {
+		try{
+			if(empty($id) || empty($colorCode)) throw new Exception();
+
+			// 消費税率
+			$tax = 0;
+
+			// 内税の場合
+			if (_TAX_CLASS == 2) {
+				$tax = $this->salesTax();
+				$tax /= 100;
+			}
+			
+			if($amount>149){
+				if($amount<300){
+					$margin = _MARGIN_1;
+				}else{
+					$margin = _MARGIN_2;
+				}
+				$query = "select size.id as sizeid, size_name as name, 
+				(case when color_id=59 then truncate(price_1 * ? * (1+".$tax.")+9,-1) else truncate(price_0 * ? * (1+".$tax.")+9,-1) end) as cost 
+				from ((catalog 
+				inner join itemsize on catalog.size_series=itemsize.series) 
+				inner join itemprice on itemprice.size_from=itemsize.size_from and itemprice.item_id=catalog.item_id) 
+				inner join size on itemsize.size_from=size.id 
+				where catalog.item_id=? and catalog.color_code=? and catalogapply<=? and catalogdate>? and 
+				itemsizeapply<=? and itemsizedate>? and itempriceapply<=? and itempricedate>? and 
+				color_lineup=1 and itemsize.size_lineup=1 group by size.id order by null";
+				$ary1 = array($margin, $margin, $id, $colorCode);
+				$ary2 = array_fill(0, 6, $this->curDate);
+				$param = array_merge($ary1, $ary2);
+				$res = $this->_sql->prepared($query, "ddisssssss", $param);
+			}else{
+				$query = "select size.id as sizeid, size_name as name, 
+				(case when color_id=59 then truncate(price_1 * margin_pvt * (1+".$tax.")+9,-1) else truncate(price_0 * margin_pvt * (1+".$tax.")+9,-1) end) as cost 
+				from ((catalog 
+				inner join itemsize on catalog.size_series=itemsize.series) 
+				inner join itemprice on itemprice.size_from=itemsize.size_from and itemprice.item_id=catalog.item_id) 
+				inner join size on itemsize.size_from=size.id 
+				where catalog.item_id=? and catalog.color_code=? and catalogapply<=? and catalogdate>? and 
+				itemsizeapply<=? and itemsizedate>? and itempriceapply<=? and itempricedate>? and 
+				color_lineup=1 and itemsize.size_lineup=1 group by size.id order by null";
+				$ary1 = array($id, $colorCode);
+				$ary2 = array_fill(0, 6, $this->curDate);
+				$param = array_merge($ary1, $ary2);
+				$res = $this->_sql->prepared($query, "isssssss", $param);
+			}
+		}catch(Exception $e){
+			$res = array();
+		}
+
+		return $res;
+	}
 	
 	
 	/**
@@ -330,12 +423,11 @@ class Product {
 	
 	
 	/**
-	 * 商品単価に使用する消費税率
-	 * @return {int} 消費税
+	 * 消費税
+	 * @return {int} 消費税率
 	 */
-	private function salesTax(): int {
+	public function salesTax(): int {
 		try {
-			if (_TAX_CLASS < 2) return 0;	// 非課税と外税の場合は消費税 0%
 			$query = "select taxratio from salestax where taxapply=(select max(taxapply) from salestax where taxapply<=?)";
 			$r = $this->_sql->prepared($query, "s", array($this->curDate));
 			if (empty($r)) throw new Exception();

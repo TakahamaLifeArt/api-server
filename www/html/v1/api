@@ -41,6 +41,17 @@ if(isset($_REQUEST['act'])){
 		$dat=$mst->getPrintposition($_REQUEST['itemid'], $_REQUEST['curdate'], $_REQUEST['mode']);
 		break;
 		
+	/**
+	 * 新絵型と旧絵型のプリント箇所の対応データ
+	 * @param {int} posid 絵型ID
+	 * @param {string} face 絵型面{@code front|back|side}
+	 * @param {string} name プリント箇所の名称
+	 */
+	case 'matchpattern':
+		$dat=$mst->matchPattern($_REQUEST['posid'], $_REQUEST['face'], $_REQUEST['name']);
+		break;
+
+
 	case 'printfee':
 	/**
 	 * 428HP 申し込み（/order）

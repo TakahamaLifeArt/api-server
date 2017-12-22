@@ -7,9 +7,13 @@
  */
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/calc.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/review.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/User.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/Delivery.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/Product.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/tag/CategoryTag.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/tag/ItemTag.php';
+use package\User;
+use package\Delivery;
 use package\Product;
 use package\tag\CategoryTag;
 use package\tag\ItemTag;
@@ -40,39 +44,37 @@ try {
 		if (!empty($param['m'])) {
 			$m = explode('/', $param['m']);
 		}
-		$mst = new Calc();
+		$calc = new Calc();
 		$pro = new Product();
 		switch ($param['r']) {
 			case 'categories':
 				/**
-				 * 0: カテゴリーID
+				 * /categories/商品カテゴリID/ソート指定{@code low|high|desc}
 				 */
 				if (empty($m[0])) {
 					if (empty($param['args'])) {
-						// マスターリスト
-						$res = $pro->getCategory();
+						$res = $pro->getCategory();		// マスターリスト
 					} else {
 						// タグによる絞り込み、カテゴリに依存しない
-						$res = $pro->itemOfTag($param['args']);
+						if (empty($m[1])) $m[1] = '';	// ソート指定
+						$res = $pro->itemOfTag($param['args'], $m[1]);
 					}
 				} else {
 					// アイテム情報、タグによる絞り込みを含む
-					$ary = $param['args'] ?? [];
-					$res = $pro->itemOfCategory($m[0], $ary);
+					$ary = $param['args'] ?? [];	// NULL合体演算子
+					if (empty($m[1])) $m[1] = '';	// ソート指定
+					$res = $pro->itemOfCategory($m[0], $ary, $m[1]);
 				}
 				break;
 			case 'itemtags':
 				/**
-				 * 0: カテゴリーID
-				 * tag[]: タグID
+				 * /itemtags/カテゴリーID/?args[]=タグID
 				 */
 				if (empty($m[0])) {
-					// カテゴリー指定なし
 					if (empty($param['args'])) throw new Exception('400');
 					$ids = $param['args'];
 					$tag = new ItemTag();
 				} else {
-					// カテゴリー指定あり
 					if (empty($param['args'])) {
 						$ids[] = $m[0];
 					} else {
@@ -81,36 +83,33 @@ try {
 					}
 					$tag = new CategoryTag();
 				}
-				$res = $pro->getItemTag($tag, ...$ids);
+				$res = $pro->getItemTag($tag, ...$ids);		// 可変長引数
 				break;
 			case 'items':
 				/**
-				 * 0: アイテムID
-				 * 1: リソース種類（カラー、単価、絵型、詳細）
-				 * 2: カラーコード
+				 * /items/アイテムID/{@code colors|sizes|costs|printpatterns|details}/商品カラーコード
 				 */
 				if (empty($m[0])) {
-					// アイテムIDは必須
 					throw new Exception('400');
 				} else if (empty($m[1])) {
-					// アイテムの基本情報
+					// アイテムの基本情報	pending
 					$res = $mst->getItem($m[0], null, 'item');
 				} else {
 					switch ($m[1]) {
-						case 'colors':
-							// アイテムカラー
+						case 'colors':	// カラー展開
 							$res = $pro->getItemColor($m[0]);
 							break;
-						case 'sizes':
-							// サイズ毎の単価
+						case 'sizes':	// サイズ毎の単価
 							$res = $pro->getSizePrice($m[0], $m[2]);
 							break;
-						case 'printpatterns':
-							// 絵型
+						case 'costs':	// サイズ毎の単価、量販単価に対応
+							$amount = $param['args'] ?? 0;	// NULL合体演算子
+							$res = $pro->getItemPrice($m[0], $m[2], $amount);
+							break;
+						case 'printpatterns':	// 絵型
 							$res = $pro->getPrintPosition($m[0]);
 							break;
-						case 'details':
-							// 詳細
+						case 'details':	// 詳細
 							$res = $pro->getItemDetail($m[0]);
 							break;
 						default:
@@ -130,46 +129,46 @@ try {
 				break;
 			case 'printpatterns':	// pending
 				/**
-				 * 0: アイテムID
+				 * /printpatterns/アイテムID
 				 */
 				$res = $mst->getPrintposition($m[0]);
 				break;
 			case 'printcharges':
 				/**
-				 * 0: プリント方法
+				 * /printcharges/プリント方法
 				 */
 				if (empty($param['args'])) throw new Exception('400');
 				$a = json_decode($param['args'], true);
 				switch ($m[0]) {
 					case 'silk':
-						$res = $mst->calcSilkPrintFee($a['amount'], $a['ink'], $a['items'], $a['size'], $a['repeat']);
+						$res = $calc->calcSilkPrintFee($a['amount'], $a['ink'], $a['items'], $a['size'], $a['repeat']);
 						break;
 					case 'inkjet':
-						$res = $mst->calcInkjetFee($a['option'], $a['amount'], $a['size'], $a['items']);
+						$res = $calc->calcInkjetFee($a['option'], $a['amount'], $a['size'], $a['items']);
 						break;
 					case 'trans':
 					case 'digit':
-						$res = $mst->calcDigitFee($a['amount'], $a['size'], $a['items'], $a['repeat']);
+						$res = $calc->calcDigitFee($a['amount'], $a['size'], $a['items'], $a['repeat']);
 						break;
 					case 'cutting':
-						$res = $mst->calcCuttingFee($a['amount'], $a['size'], $a['items']);
+						$res = $calc->calcCuttingFee($a['amount'], $a['size'], $a['items']);
 						break;
 					case 'embroidery':
 					case 'emb':
-						$res = $mst->calcEmbroideryFee($a['option'], $a['amount'], $a['size'], $a['items'], $a['repeat']);
+						$res = $calc->calcEmbroideryFee($a['option'], $a['amount'], $a['size'], $a['items'], $a['repeat']);
 						break;
-					case 'recommend':
+					case 'recommend':	// おまかせプリント
 						for ($i=0; $i<count($a['printable']); $i++) {
 							switch ($a['printable'][$i]) {
 								case 'silk':
-									$tmp = $mst->calcSilkPrintFee($a['amount'], $a['ink'], $a['items'], $a['size'], $a['repeat']['silk']);
+									$tmp = $calc->calcSilkPrintFee($a['amount'], $a['ink'], $a['items'], $a['size'], $a['repeat']['silk']);
 									break;
 								case 'inkjet':
-									$tmp = $mst->calcInkjetFee($a['option'], $a['amount'], $a['size'], $a['items']);
+									$tmp = $calc->calcInkjetFee($a['option'], $a['amount'], $a['size'], $a['items']);
 									break;
 								case 'trans':
 								case 'digit':
-									$tmp = $mst->calcDigitFee($a['amount'], $a['size'], $a['items'], $a['repeat']['digit']);
+									$tmp = $calc->calcDigitFee($a['amount'], $a['size'], $a['items'], $a['repeat']['digit']);
 									break;
 							}
 							
@@ -183,6 +182,26 @@ try {
 						}
 						break;
 				}
+				break;
+			case 'users':
+				/**
+				 * /users/ユーザーID
+				 */
+				$user = new User();
+				$res = $user->getUser($m[0]);
+				break;
+			case 'taxes':
+				/**
+				 * /taxes
+				 */
+				$res = $pro->salesTax();	// 消費税率（int）
+				break;
+			case 'delivery':
+				/**
+				 * /delivery/納期のtimestamp(sec)
+				 */
+				$deli = new Delivery();
+				$res = $deli->getWorkDay($m[0]);
 				break;
 			default:
 				throw new Exception('404');

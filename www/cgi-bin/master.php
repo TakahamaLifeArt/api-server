@@ -18,6 +18,7 @@ class Master{
  *	getItemcolor		アイテムカラー一覧
  *	getItemprice		価格一覧
  *	getPrintposition	プリント位置画像（絵型）の相対パスとなるキーとタイプ
+ *	matchPattern		新絵型と旧絵型のプリント箇所の対応データ
  *	getItemAttr			商品の属性データとカラーごとの商品コードを返す
  *	getSizePrice		商品のカラーを指定してサイズごとの価格を返す
  *	getCategories		商品カテゴリーを指定して商品情報を返す
@@ -359,6 +360,55 @@ class Master{
 
 		return $res;
 	}
+	
+	
+	/**
+	 * 新絵型と旧絵型のプリント箇所の対応データ
+	 * @param {int} posid 絵型ID
+	 * @param {string} face 絵型面{@code front|back|side}
+	 * @param {string} name プリント箇所の名称
+	 * @return {array} [area:旧プリント箇所名 code:旧プリント箇所コード]
+	 */
+	public function matchPattern($posid, $face, $name) {
+		try{
+			if (empty($posid)) throw new Exception();
+			
+			$conn = db_connect();
+			$sql = sprintf("select * from patternmatch where posid=%d and face='%s' and name='%s';", $posid, $face, $name);
+			$result = exe_sql($conn, $sql);
+			$res = mysqli_fetch_assoc($result);
+		}catch(Exception $e){
+			$res = array();
+		}
+		mysqli_close($conn);
+
+		return $res;
+	}
+		
+		
+	// テスト用
+//	public function getPrintPattern($id) {
+//		try{
+//			$conn = db_connect();
+//
+//			$sql = sprintf("select printposition.id as id, category_type as category, item_type as item, position_type as pos, 
+//			front.name_list as front, back.name_list as back, side.name_list as side from (printposition 
+//			left join printpattern as front on frontface=front.id) 
+//			left join printpattern as back on backface=back.id 
+//			left join printpattern as side on sideface=side.id where printposition.id=%d group by printposition.id", $id);
+//			
+//			$result = exe_sql($conn, $sql);
+//			while ($rec = mysqli_fetch_assoc($result)) {
+//				$res[] = $rec;
+//			}
+//			
+//		}catch(Exception $e){
+//			$res = array();
+//		}
+//		mysqli_close($conn);
+//
+//		return $res;
+//	}
 	
 	
 	

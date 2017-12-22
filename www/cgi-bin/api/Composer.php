@@ -12,9 +12,9 @@ require_once dirname(__FILE__).'/api_conf.php';
 //require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/weblib/User.php';
 //require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/weblib/Master.php';
 //require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/weblib/fb/facebook.php';
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/api/package/calendar/MyCalendar.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/api/package/calendar/DatepickCalendar.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/api/package/db/DbTable.php';
-use package\calendar\MyCalendar;
+use package\calendar\DatepickCalendar;
 use package\db\DbTable;
 class Composer extends DbTable {
 	
@@ -28,8 +28,8 @@ class Composer extends DbTable {
 	 * カレンダーのタグを返す
 	 * @param {int}		y 西暦
 	 * @param {int}		m 月
-	 * @param {array}	me ユーザー情報
-	 * @return {array} [year:西暦、month:月、today:今日の日付、schedule:カレンダー要素のタグ]
+	 * @param {array}	me ユーザー情報 {user_id, locale, pick, dayOff, holiday}
+	 * @return {array} [schedule:カレンダー要素のタグ, me:ユーザー情報]
 	 */
 	public static function showCalendar(int $year=0, int $month=0, array $me=null): array {
 		if ($year == FALSE || $month == FALSE) {
@@ -39,23 +39,26 @@ class Composer extends DbTable {
 		}
 		$year = date('Y', $timestamp);
 		$month = date('n', $timestamp);
+		$today = explode('-', date('Y-n-j'));
 		$param = array(
-			"user_id"=>"0",
-			"locale"=>"ja",
-			"pick"=>0,
-//			"workday"=>4,
-//			"deliveryday"=>1,
-			'onsundays'=>1,
-			'onmondays'=>0,
-			'ontuesdays'=>0,
-			'onwednesdays'=>0,
-			'onthursdays'=>0,
-			'onfridays'=>0,
-			'onsaturdays'=>1,
-			'onholidays'=>1,
+			'user_id'=>'0',
+			'locale'=>'ja',
+			'pick'=>0,
+			'dayOff'=>array(1,0,0,0,0,0,1,1),
 			'holiday'=>array(),
 //			'holidaysetting'=>0,
+			'currentYear'=>$year,
+			'currentMonth'=>$month,
+			'today'=>array('y'=>$today[0], 'm'=>$today[1], 'd'=>$today[2]), 
 		);
+		if (empty($me)) {
+			$me = $param;
+		} else {
+			$me = array_replace_recursive($param, $me);
+		}
+		if (empty($me['holiday'])) {
+			$me['holiday'] = self::getHoliday();
+		}
 		
 		/*
 		if (!is_null($me)) {
@@ -70,21 +73,12 @@ class Composer extends DbTable {
 				$me = $u->setSession();
 			}
 		}
-		if (empty($me)) {
-			$me = $param;
-		}
 		*/
 		
-		if (empty($me)) {
-			$param['holiday'] = self::getHoliday();
-			$me = $param;
-		}
-		$mode = 0;
-		$today = explode('-', date('Y-n-j'));
-		$calendar = new MyCalendar((int)$year, (int)$month, $me['locale']);
+//		$mode = 0;
+		$calendar = new DatepickCalendar((int)$year, (int)$month, $me['locale']);
 		return array(
-			'year'=>$year, 'month'=>$month, 'today'=>array('y'=>$today[0], 'm'=>$today[1], 'd'=>$today[2]), 
-			'schedule'=>$calendar->render($me, $mode),
+			'schedule'=>$calendar->render($me),
 			'me'=>$me
 		);
 	}
