@@ -325,11 +325,11 @@ class Calc extends Master {
 	 */
 	public function calcSilkPrintFee($amount, $inkcount, $itemid, $size=0, $repeat=0){
 		try{
-			if ($inkcount<1 || empty($itemid) || !is_array($itemid)) return 0;
+			if ($inkcount<1 || empty($itemid) || !is_array($itemid)) throw new Exception();
 			
 			// 割増金額を取得
 			$r1 = $this->getExtraCharge($itemid);
-			if (empty($r1)) return 0;
+			if (empty($r1)) throw new Exception();
 
 			// 割増金額をアイテム毎に算出
 			// 同版分類でアイテムIDを集計
@@ -365,7 +365,7 @@ class Calc extends Master {
 			$stmt->execute();
 			$stmt->store_result();
 			$r2 = MYDB2::fetchAll($stmt);
-			if (empty($r2)) return 0;
+			if (empty($r2)) throw new Exception();
 
 			// インク代
 			$tot = 0;
@@ -399,7 +399,7 @@ class Calc extends Master {
 			// プリント代合計
 			$rs['tot'] = $rs['press'] + $plates + $extraCharge;
 		} catch(Exception $e) {
-			$rs = 0;
+			$rs['tot'] = 0;
 		}
 
 		$stmt->close();
@@ -418,11 +418,11 @@ class Calc extends Master {
 	 */
 	public function calcInkjetFee($option, $amount, $size, $itemid){
 		try{
-			if (empty($itemid) || !is_array($itemid)) return 0;
+			if (empty($itemid) || !is_array($itemid)) throw new Exception();
 
 			// 割増金額を取得
 			$r1 = $this->getExtraCharge($itemid);
-			if (empty($r1)) return 0;
+			if (empty($r1)) throw new Exception();
 
 			// 割増金額をアイテム毎に算出
 			$rs['extra'] = array();
@@ -452,7 +452,7 @@ class Calc extends Master {
 			$stmt->execute();
 			$stmt->store_result();
 			$r2 = MYDB2::fetchAll($stmt);
-			if (empty($r2)) return 0;
+			if (empty($r2)) throw new Exception();
 
 			// プリント代
 			$rs['press'] = $r2[0]['fee'] * $amount;
@@ -460,7 +460,7 @@ class Calc extends Master {
 			// プリント代合計
 			$rs['tot'] = $rs['press'] + $extraCharge;
 		} catch(Exception $e) {
-			$rs = 0;
+			$rs['tot'] = 0;
 		}
 
 		$stmt->close();
@@ -478,11 +478,11 @@ class Calc extends Master {
 	 */
 	public function calcCuttingFee($amount, $size, $itemid){
 		try{
-			if (empty($itemid) || !is_array($itemid)) return 0;
+			if (empty($itemid) || !is_array($itemid)) throw new Exception();
 
 			// 割増金額を取得
 			$r1 = $this->getExtraCharge($itemid);
-			if (empty($r1)) return 0;
+			if (empty($r1)) throw new Exception();
 
 			// 割増金額をアイテム毎に算出
 			$rs['extra'] = array();
@@ -511,7 +511,7 @@ class Calc extends Master {
 			$stmt->execute();
 			$stmt->store_result();
 			$r2 = MYDB2::fetchAll($stmt);
-			if (empty($r2)) return 0;
+			if (empty($r2)) throw new Exception();
 
 			// プリント代
 			$rs['press'] = $r2[0]['fee'] * $amount;
@@ -519,7 +519,7 @@ class Calc extends Master {
 			// プリント代合計
 			$rs['tot'] = $rs['press'] + $extraCharge;
 		} catch(Exception $e) {
-			$rs = 0;
+			$rs['tot'] = 0;
 		}
 
 		$stmt->close();
@@ -538,11 +538,11 @@ class Calc extends Master {
 	 */
 	public function calcDigitFee($amount, $size, $itemid, $repeat=0){
 		try{
-			if (empty($itemid) || !is_array($itemid)) return 0;
+			if (empty($itemid) || !is_array($itemid)) throw new Exception();
 
 			// 割増金額を取得
 			$r1 = $this->getExtraCharge($itemid);
-			if (empty($r1)) return 0;
+			if (empty($r1)) throw new Exception();
 
 			// 割増金額をアイテム毎に算出
 			$rs['extra'] = array();
@@ -573,7 +573,7 @@ class Calc extends Master {
 			$stmt->execute();
 			$stmt->store_result();
 			$r2 = MYDB2::fetchAll($stmt);
-			if (empty($r2)) return 0;
+			if (empty($r2)) throw new Exception();
 
 			// プリント代
 			$rs['press'] = $r2[0]['fee'] * $amount;
@@ -584,7 +584,7 @@ class Calc extends Master {
 			// プリント代合計
 			$rs['tot'] = $rs['press'] + $rs['plates'] + $extraCharge;
 		} catch(Exception $e) {
-			$rs = 0;
+			$rs['tot'] = 0;
 		}
 
 		$stmt->close();
@@ -604,11 +604,11 @@ class Calc extends Master {
 	 */
 	public function calcEmbroideryFee($option, $amount, $size, $itemid, $repeat=0){
 		try{
-			if (empty($itemid) || !is_array($itemid)) return 0;
+			if (empty($itemid) || !is_array($itemid)) throw new Exception();
 
 			// 割増金額を取得
 			$r1 = $this->getExtraCharge($itemid);
-			if (empty($r1)) return 0;
+			if (empty($r1)) throw new Exception();
 
 			// 割増金額をアイテム毎に算出
 			$rs['extra'] = array();
@@ -638,7 +638,7 @@ class Calc extends Master {
 			$stmt->execute();
 			$stmt->store_result();
 			$r2 = MYDB2::fetchAll($stmt);
-			if (empty($r2)) return 0;
+			if (empty($r2)) throw new Exception();
 
 			// 型代を取得
 			$sql = 'select coalesce(plate_charge.price, 0) as plateCharge from plate_charge
@@ -660,7 +660,7 @@ class Calc extends Master {
 			// プリント代合計
 			$rs['tot'] = $rs['press'] + $rs['plates'] + $extraCharge;
 		} catch(Exception $e) {
-			$rs = 0;
+			$rs['tot'] = 0;
 		}
 
 		$stmt->close();

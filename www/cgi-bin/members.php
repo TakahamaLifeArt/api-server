@@ -98,7 +98,6 @@ class Members Extends MYDB2 {
 	*	@args	customer ID
 	*
 	*	return	[注文情報]
-	*			itemid 112トートバッグ、212スクエアトートはナチュラルが最安価格
 	*/
 	public function getOrderHistory($args){
 		try{
@@ -113,11 +112,12 @@ class Members Extends MYDB2 {
 			 shipped, deposit, progress_id, progressname, estimated, imagecheck,
 			 coalesce(item.item_name,orderitemext.item_name) as item, 
 			 coalesce(item_color, color_name) as color, 
-			 coalesce(orderitemext.size_name, size.size_name) as size,
-			 coalesce(item.id, 0) as itemid, item_code, color_code, category_key,
+			 coalesce(orderitemext.size_name, size.size_name) as size, size.id as size_id,
+			 coalesce(item.id, 0) as itemid, item_code, color_code, category_key, category.id as category_id,
 			 orderitemext.price as price,additionalname, orders.additionalfee,
 			 printfee, exchinkfee, packfee, expressfee, discountfee, reductionfee, carriagefee, extracarryfee, designfee, codfee,
-			 basefee, salestax, creditfee, master_id, orderitemext.price, item_cost
+			 basefee, salestax, creditfee, master_id, orderitemext.price, item_cost, printposition_id,
+			 print_group_id, item_group1_id, item_group2_id, catalog.id as master_id
 			 FROM salestax, ((((((((((((orders left join customer on orders.customer_id=customer.id)
 			 left join estimatedetails on orders.id=estimatedetails.orders_id)
 			 left join progressstatus on orders.id=progressstatus.orders_id)
@@ -143,14 +143,14 @@ class Members Extends MYDB2 {
 		 } else {
 		//イメージ画像表示用の注文履歴（注文確定のデータ以外でも検索）
 			
-			$sql = "SELECT orders.id as orderid, schedule3, imagecheck,
+			$sql = "SELECT orders.id as orderid, schedule2, schedule3, imagecheck,
 			 coalesce(item.item_name,orderitemext.item_name) as item, 
 			 coalesce(item_color, color_name) as color, 
 			 coalesce(orderitemext.size_name, size.size_name) as size,
 			 coalesce(item.id, 0) as itemid, item_code, color_code, category_key,
 			 orderitemext.price as price,additionalname, orders.additionalfee,
 			 printfee, exchinkfee, packfee, expressfee, discountfee, reductionfee, carriagefee, extracarryfee, designfee, codfee,
-			 basefee, salestax, creditfee, master_id, orderitemext.price, item_cost
+			 basefee, salestax, creditfee, master_id, orderitemext.price, item_cost, printposition_id
 			 FROM salestax, (((((((((((orders left join customer on orders.customer_id=customer.id)
 			 left join estimatedetails on orders.id=estimatedetails.orders_id)
 			 left join acceptstatus on orders.id=acceptstatus.orders_id)
@@ -168,7 +168,7 @@ class Members Extends MYDB2 {
 	 		 $sql .= " WHERE created>'2011-06-05' and ordertype='general'";
 			 $sql .= " and (itemprice.size_from=size.id || size.id is null)
 			 and customer.id=? order by orders.id";
-				$args = str_replace(",no_progress","",$args);	
+				$args = str_replace(",no_progress","",$args);
 		 }
 			
 			$stmt = $conn->prepare($sql);
@@ -222,10 +222,17 @@ class Members Extends MYDB2 {
 					$rs[$idx]['itemlist'][$rec[$i]['item']][$rec[$i]['color']][] = array('volume'=>$rec[$i]['amount'], 
 																						 'size'=>$rec[$i]['size'],
 																						 'categorykey'=>$rec[$i]['category_key'],
+																						 'category_id'=>$rec[$i]['category_id'],
 																						 'itemcode'=>$rec[$i]['item_code'],
 																						 'colorcode'=>$rec[$i]['color_code'],
 																						 'cost'=>$cost,
-																						 'itemid'=>$rec[$i]['itemid']
+																						 'itemid'=>$rec[$i]['itemid'],
+																						 'printposition_id'=>$rec[$i]['printposition_id'],
+																						 'master_id'=>$rec[$i]['master_id'],
+																						 'size_id'=>$rec[$i]['size_id'],
+																						 'print_group_id'=>$rec[$i]['print_group_id'],
+																						 'item_group1_id'=>$rec[$i]['item_group1_id'],
+																						 'item_group2_id'=>$rec[$i]['item_group2_id'],
 																						);
 					$rs[$idx]['itemamount'][$rec[$i]['item']] = $rec[$i]['amount'];	// アイテム毎の枚数
 				}else{
@@ -245,10 +252,17 @@ class Members Extends MYDB2 {
 						$rs[$idx]['itemlist'][$rec[$i]['item']][$rec[$i]['color']][] = array('volume'=>$rec[$i]['amount'], 
 																							 'size'=>$rec[$i]['size'],
 																							 'categorykey'=>$rec[$i]['category_key'],
+																							 'category_id'=>$rec[$i]['category_id'],
 																							 'itemcode'=>$rec[$i]['item_code'],
 																							 'colorcode'=>$rec[$i]['color_code'],
 																							 'cost'=>$cost,
-																						 	 'itemid'=>$rec[$i]['itemid']
+																						 	 'itemid'=>$rec[$i]['itemid'],
+																							 'printposition_id'=>$rec[$i]['printposition_id'],
+																							 'master_id'=>$rec[$i]['master_id'],
+																							 'size_id'=>$rec[$i]['size_id'],
+																							 'print_group_id'=>$rec[$i]['print_group_id'],
+																							 'item_group1_id'=>$rec[$i]['item_group1_id'],
+																							 'item_group2_id'=>$rec[$i]['item_group2_id'],
 																							);
 						$rs[$idx]['itemamount'][$rec[$i]['item']] += $rec[$i]['amount'];
 					}
@@ -310,11 +324,17 @@ class Members Extends MYDB2 {
 					$category = $rec[$i]['category_name'];
 				}
 				$rs[$category][] = array('area_path'=>$rec[$i]['area_path'],
-												'select_key'=>$select_key,
-												'select_name'=>$select_name,
-												'design_path'=>$design_path,
-												'category_id'=>$rec[$i]['category_id']
-												);
+										 'select_key'=>$select_key,
+										 'select_name'=>$select_name,
+										 'design_path'=>$design_path,
+										 'category_id'=>$rec[$i]['category_id'],
+										 'method'=>$rec[$i]['print_type'],
+										 'ink'=>$rec[$i]['ink_count'],
+										 'size'=>$rec[$i]['areasize_id'],
+										 'option'=>$rec[$i]['pirnt_option'],
+										 'jumbo'=>$rec[$i]['jumbo_plate'],
+										 'printposition_id'=>$rec[$i]['printposition_id'],
+										);
 			}
 			
 		}catch(Exception $e){
