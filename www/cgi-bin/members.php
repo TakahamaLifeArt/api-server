@@ -331,7 +331,7 @@ class Members Extends MYDB2 {
 										 'method'=>$rec[$i]['print_type'],
 										 'ink'=>$rec[$i]['ink_count'],
 										 'size'=>$rec[$i]['areasize_id'],
-										 'option'=>$rec[$i]['pirnt_option'],
+										 'option'=>$rec[$i]['print_option'],
 										 'jumbo'=>$rec[$i]['jumbo_plate'],
 										 'printposition_id'=>$rec[$i]['printposition_id'],
 										);
