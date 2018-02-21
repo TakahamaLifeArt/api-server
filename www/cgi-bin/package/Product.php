@@ -3,8 +3,14 @@
  * 商品クラス for API3
  * charset utf-8
  *--------------------
+ * log
+ * 2017-12-12 created
+ * 2018-02-20 ソート指定に、生地の厚い順、生地の薄い順、レビューの少ない順を追加
+ *			  取得するレコード数の制限（limit句）の指定を追加
+ *--------------------
  *
  * getCategory		商品カテゴリー一覧
+ * getItem			商品の基本情報
  * getItemLiset		商品一覧情報
  * itemOfCategory	カテゴリー内のアイテムを対象に商品タグによる絞り込み
  * itemOfTag		タグ名の一覧
@@ -42,6 +48,7 @@ class Product {
 	
 	/**
 	 * 商品カテゴリー一覧
+	 * @param {int} id アイテムID
 	 * @return {array} [id:category_id, code:category_key, name:category_name]
 	 */
 	public function getCategory(): array {
@@ -58,16 +65,35 @@ class Product {
 	
 	
 	/**
+	 * 商品の基本情報
+	 * @return {array} [id, code, name, position_id, maker_id, oz, surcharge_id, volumerange_id, silkscreen_id]
+	 */
+	public function getItem(int $id): array {
+		try{
+			$query = "select id, item_code as code, item_name as name, printposition_id as position_id,
+			maker_id, oz, print_group_id as surcharge_id, item_group1_id as volumerange_id, item_group2_id as silkscreen_id 
+			from item
+			where id=? and itemapply<=? and itemdate>?";
+			$res = $this->_sql->prepared($query, "iss", array($id, $this->curDate, $this->curDate));
+		}catch(Exception $e){
+			$res = array();
+		}
+		return $res;
+	}
+	
+	
+	/**
 	 * 商品一覧情報
 	 * カテゴリー{@code $id}又はアイテムID{@code $ary}のどちらかを指定する
 	 * @param {int} id カテゴリID(default:0)
 	 * @param {array} ary アイテムID
-	 * @param {string} sort 表示順を指定、popular|''(人気), low(高価), high(廉価), desc(レビュー数)
-	 * @return {array} 各アイテムのデータ 
+	 * @param {string} sort 表示順を指定、popular|''(人気), low(廉価), high(高価), desc(レビュー数降順), asc(レビュー数昇順), heavy(生地が厚い), light(生地が薄い)
+	 * @param {string} limit 取得するレコード数を制限、{@code 'offset-length'}
+	 * @return {array} 各アイテムのデータ
 	 * [category_key, category_name, item_id, item_name, item_code, cost, pos_id, maker_id, 
 	 *  oz, colors, i_color_code, i_caption, reviews, sizename_from, sizename_to, range_id, screen_id]
 	 */
-	private function getItemList(int $id=0, array $ary=array(), string $sort='popular'): array {
+	private function getItemList(int $id=0, array $ary=array(), string $sort='popular', string $limit=''): array {
 		try{
 			if(empty($id) && count($ary)==0) throw new Exception();
 
@@ -104,12 +130,30 @@ class Product {
 			}
 			$query .= " group by item.id";
 			
+			if (!empty($limit)) {
+				$args = explode('-', $limit);
+				if (count($args) === 1) {
+					$offset = 0;
+					$length = $args[0];
+				} else {
+					$offset = $args[0];
+					$length = $args[1];
+				}
+				$limit = " limit ".$offset.",".$length;
+			}
+			
 			if ($sort == 'low') {
-				$query .= " order by cost asc";
+				$query .= " order by cost asc".$limit;
 			} else if ($sort == 'high') {
-				$query .= " order by cost desc";
-			} else if ($sort != 'desc') {
-				$query .= " order by item_row";
+				$query .= " order by cost desc".$limit;
+			} else if ($sort == 'heavy') {
+				$query .= " order by oz desc".$limit;
+			} else if ($sort == 'light') {
+				$query .= " order by oz asc".$limit;
+			} else if (empty($sort) || $sort == 'popular') {
+				$query .= " order by item_row".$limit;
+			} else {
+				$sortBy = $sort;
 			}
 
 			$res = $this->_sql->prepared($query, $marker, $param);
@@ -119,11 +163,21 @@ class Product {
 			// itemreview count
 			$queryReview = "select count(*) as review_count from itemreview where item_id=?";
 			
-			// item size min,max
-			$querySize = "select size_name from size inner join (
-				select max(size_row) as maxsize, min(size_row) as minsize from 
-				itemsize inner join size on size_from=size.id where item_id=? and itemsizeapply<=? and itemsizedate>?) as tmp 
-				on size.size_row=tmp.maxsize or size.size_row=minsize order by size_row";
+			// item size min,max,count
+			$querySize = "select count(*) as sizes, max(size_row) as maxsize, min(size_row) as minsize from 
+				size inner join itemsize on size_from=size.id where item_id=? and itemsizeapply<=? and itemsizedate>?";
+			
+//			$querySize = "select size_name from size inner join (
+//				select max(size_row) as maxsize, min(size_row) as minsize from 
+//				itemsize inner join size on size_from=size.id where item_id=? and itemsizeapply<=? and itemsizedate>?) as tmp 
+//				on size.size_row=tmp.maxsize or size.size_row=minsize order by size_row";
+			
+			// size master
+			$sizeMaster = $this->_sql->execQuery("select * from size");
+			$sizeCount = count($sizeMaster);
+			for ($i=0; $i<$sizeCount; $i++) {
+				$sizeName[$sizeMaster[$i]['size_row']] = $sizeMaster[$i]['size_name'];
+			}
 			
 			for ($i=0; $i<$l; $i++) {
 				// review count
@@ -132,16 +186,28 @@ class Product {
 				
 				// size
 				$size = $this->_sql->prepared($querySize, 'iss', array($res[$i]['item_id'], $this->curDate, $this->curDate) );
-				$size = array_column($size, 'size_name');
-				$res[$i]['sizename_from'] = $size[0];
-				$res[$i]['sizename_to'] = $size[1] ?? $size[0];	// NULL合体演算子
+				$res[$i]['sizename_from'] = $sizeName[$size[0]['minsize']];
+				$res[$i]['sizename_to'] = $sizeName[$size[0]['maxsize']];
+				$res[$i]['sizes'] = $size[0]['sizes'];
+				
+//				$size = array_column($size, 'size_name');
+//				$res[$i]['sizename_from'] = $size[0];
+//				$res[$i]['sizename_to'] = $size[1] ?? $size[0];	// NULL合体演算子
 			}
 			
-			if ($sort=='desc') {
+			if (!empty($sortBy)) {
 				for($i=0; $i<count($res); $i++){
 					$a[$i] = $res[$i]['reviews'];
 				}
-				array_multisort($a, SORT_DESC, $res);
+				if ($sortBy=='desc') {
+					array_multisort($a, SORT_DESC, $res);
+				} else {
+					array_multisort($a, SORT_ASC, $res);
+				}
+				
+				if (!empty($limit)) {
+					$res = array_slice($res, (int)$offset, (int)$length);
+				}
 			}
 		}catch(Exception $e){
 			$res = array();
@@ -154,15 +220,16 @@ class Product {
 	 * カテゴリー内のアイテムを対象に商品タグによる絞り込み
 	 * @param {int} id カテゴリーID
 	 * @param {array} tag タグID
-	 * @param {string} sort 表示順を指定、popular|null(人気), low(高価), high(廉価), desc(レビュー数)
+	 * @param {string} sort 表示順を指定、popular|null(人気), low(廉価), high(高価), desc(レビュー数降順), asc(レビュー数昇順), heavy(生地が厚い), light(生地が薄い)
+	 * @param {string} limit 取得するレコード数を制限、{@code 'offset-length'}
 	 * @return {array} 各アイテム情報, getItemListを呼び出す
 	 */
-	public function itemOfCategory(int $id, array $tag=array(), string $sort='popular'): array {
+	public function itemOfCategory(int $id, array $tag=array(), string $sort='', string $limit=''): array {
 		try {
 			if(empty($id)) throw new Exception();
 			$l = count($tag);
 			if ($l==0) {
-				$res = $this->getItemList($id, [], $sort);
+				$res = $this->getItemList($id, [], $sort, $limit);
 				return $res;
 			}
 			$query = "select item.id as itemid from ".implode('', array_fill(0, $l, '(') );
@@ -178,7 +245,7 @@ class Product {
 			$param = array_merge($tag, array($this->curDate, $this->curDate));
 			$rec = $this->_sql->prepared($query, $marker, $param);
 			$ids = array_column($rec, 'itemid');
-			$res = $this->getItemList(0, $ids, $sort);
+			$res = $this->getItemList(0, $ids, $sort, $limit);
 		} catch (Exception $e) {
 			$res = array();
 		}
@@ -189,10 +256,11 @@ class Product {
 	/**
 	 * アイテムを商品タグで絞り込み
 	 * @param {array} tag タグID
-	 * @param {string} sort 表示順を指定、popular|null(人気), low(高価), high(廉価), desc(レビュー数)
+	 * @param {string} sort 表示順を指定、popular|null(人気), low(廉価), high(高価), desc(レビュー数降順), asc(レビュー数昇順), heavy(生地が厚い), light(生地が薄い)
+	 * @param {string} limit 取得するレコード数を制限、{@code 'offset-length'}
 	 * @return {array} 各アイテム情報, getItemListを呼び出す
 	 */
-	public function itemOfTag(array $tag, string $sort='popular'): array {
+	public function itemOfTag(array $tag, string $sort='', string $limit=''): array {
 		try {
 			if(empty($tag)) throw new Exception();
 			$l = count($tag);
@@ -208,7 +276,7 @@ class Product {
 			$param = array_merge($tag, array($this->curDate, $this->curDate));
 			$rec = $this->_sql->prepared($query, $marker, $param);
 			$ids = array_column($rec, 'itemid');
-			$res = $this->getItemList(0, $ids, $sort);
+			$res = $this->getItemList(0, $ids, $sort, $limit);
 		} catch (Exception $e) {
 			$res = array($e->getMessage());
 		}
