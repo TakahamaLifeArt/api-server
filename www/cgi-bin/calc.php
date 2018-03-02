@@ -365,7 +365,7 @@ class Calc extends Master {
 			$stmt->execute();
 			$stmt->store_result();
 			$r2 = MYDB2::fetchAll($stmt);
-			if (empty($r2)) throw new Exception();
+//			if (empty($r2)) throw new Exception();
 
 			// インク代
 			$tot = 0;
@@ -452,7 +452,7 @@ class Calc extends Master {
 			$stmt->execute();
 			$stmt->store_result();
 			$r2 = MYDB2::fetchAll($stmt);
-			if (empty($r2)) throw new Exception();
+//			if (empty($r2)) throw new Exception();
 
 			// プリント代
 			$rs['press'] = $r2[0]['fee'] * $amount;
@@ -511,7 +511,7 @@ class Calc extends Master {
 			$stmt->execute();
 			$stmt->store_result();
 			$r2 = MYDB2::fetchAll($stmt);
-			if (empty($r2)) throw new Exception();
+//			if (empty($r2)) throw new Exception();
 
 			// プリント代
 			$rs['press'] = $r2[0]['fee'] * $amount;
@@ -573,7 +573,7 @@ class Calc extends Master {
 			$stmt->execute();
 			$stmt->store_result();
 			$r2 = MYDB2::fetchAll($stmt);
-			if (empty($r2)) throw new Exception();
+//			if (empty($r2)) throw new Exception();
 
 			// プリント代
 			$rs['press'] = $r2[0]['fee'] * $amount;
@@ -638,7 +638,7 @@ class Calc extends Master {
 			$stmt->execute();
 			$stmt->store_result();
 			$r2 = MYDB2::fetchAll($stmt);
-			if (empty($r2)) throw new Exception();
+//			if (empty($r2)) throw new Exception();
 
 			// 型代を取得
 			$sql = 'select coalesce(plate_charge.price, 0) as plateCharge from plate_charge
