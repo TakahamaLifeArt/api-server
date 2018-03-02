@@ -836,24 +836,24 @@ class Master{
 			}else{
 				if(empty($tag)){
 					if ($mode!="category") {
-						$res = $this->itemIdOf($id, $tag, $mode);
+						$res = $this->itemIdOf($id, $tag, $mode, null, $limit);
 					}
 				}else{
 					// 指定タグ全てが共通部分となるアイテムの集合
 					$len = count($tag);
 					if($mode!="category"){
-						$tmp = $this->itemIdOf($id, null, $mode, $tmp);
+						$tmp = $this->itemIdOf($id, null, $mode, $tmp, $limit);
 						for($t=0; $t<$len; $t++){
-							$tmp = $this->itemIdOf($tag[$t], null, $mode, $tmp);
+							$tmp = $this->itemIdOf($tag[$t], null, $mode, $tmp, $limit);
 						}
 					}else{
 						for($t=0; $t<$len; $t++){
-							$tmp = $this->itemIdOf($id, $tag[$t], $mode, $tmp);
+							$tmp = $this->itemIdOf($id, $tag[$t], $mode, $tmp, $limit);
 						}
 					}
 					$res = $tmp;
 				}
-				
+
 				if (empty($tag) && $mode=="category") {
 					$res = $this->getCategories($id);
 				} else if (!empty($res) && is_array($res)) {
@@ -1415,10 +1415,19 @@ class Master{
 			}
 			$info["enq1date"] = date('Y-m-d H:i:s');
 			
+			// checkbox
+			$a17 = '';
+			for ($i=0; $i<count($info['ans17']); $i++) {
+				$a17 = implode(',', $info['a17']);
+			}
+			
 			// アンケート結果の登録
 			$sql = sprintf("INSERT INTO enquete1(ans1,ans2,ans3,ans4,ans5,ans6,ans7,ans8,ans9,ans10,ans11,ans12,ans13,ans14,
+			ans15,ans16,ans17,ans18,
 			enq1date, customer_number, enq1name, enq1zip, enq1addr) 
-							VALUES(%d,'%s',%d,%d,%d,%d,%d,'%s','%s','%s','%s','%s','%s','%d','%s',%d,'%s','%s','%s')",
+							VALUES(%d,'%s',%d,%d,%d,%d,%d,'%s','%s','%s','%s','%s','%s','%d',
+							'%s','%s','%s','%s',
+							'%s',%d,'%s','%s','%s')",
 							$info["a1"],
 							$info["a2"],
 							$info["a3"],
@@ -1433,6 +1442,10 @@ class Master{
 							$info["a12"],
 							$info["a13"],
 							$info["a14"],
+							$info["a15"],
+							$info["a16"],
+							$a17,
+							$info["a18"],
 							$info["enq1date"],
 							$info["number"],
 							$info["customername"],
