@@ -2,7 +2,7 @@
 /**
  * Takahama Life Art 
  * API controller
- * (c) 2017 ks.desk@gmail.com
+ * @author <ks.desk@gmail.com>
  *
  */
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/calc.php';

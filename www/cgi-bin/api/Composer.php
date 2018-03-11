@@ -1,8 +1,12 @@
 <?php
 /**
  * API for the Component
- * charset "UTF-8"
- * @author (c) 2014 ks.desk@gmail.com
+ * @author <ks.desk@gmail.com>
+ *
+ * Copyright © 2014 Kyoda Yasushi
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
  */
 declare(strict_types=1);
 require_once dirname(__FILE__).'/api_conf.php';

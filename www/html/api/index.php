@@ -1,8 +1,7 @@
 <?php
 /*
  * API controller
- * (c) 2014 ks.desk@gmail.com
- *
+ * @author <ks.desk@gmail.com>
  */
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/api/Composer.php';
 

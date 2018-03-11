@@ -3,7 +3,12 @@
  * 納期カレンダー
  * 注文確定日を指定すると発送日とお届け日を計算してカレンダーに表示
  * @package calendar
- * @author (c) 2014 ks.desk@gmail.com
+ * @author <ks.desk@gmail.com>
+ *
+ * Copyright © 2014 Kyoda Yasushi
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
  */
 namespace package\calendar;
 require_once 'Calendar.php';

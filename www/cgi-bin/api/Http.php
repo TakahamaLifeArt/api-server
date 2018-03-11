@@ -1,8 +1,13 @@
 <?php
-/*
-*	HTTP Request
-*	@author (c) 2014 ks.desk@gmail.com
-*/
+/**
+ * HTTP Request
+ * @author <ks.desk@gmail.com>
+ *
+ * Copyright © 2014 Kyoda Yasushi
+ *
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/MIT
+ */
 declare(strict_types=1);
 class Http
 {
