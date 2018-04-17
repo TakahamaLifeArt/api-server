@@ -9,7 +9,16 @@ require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/SqlManager.php';
 use \Exception;
 use package\db\SqlManager;
 class CategoryTag implements TagList {
-	public function __construct() {}
+	
+	private $_sql;		// データベースサーバーへの接続を表すオブジェクト
+	
+	
+	/**
+	 * param {string} db データベース名
+	 */
+	public function __construct(string $db) {
+		$this->_sql = new SqlManager($db);
+	}
 
 
 	/**
@@ -38,8 +47,7 @@ class CategoryTag implements TagList {
 				 inner join tagtype on tags.tag_type=tagtype.tagtypeid
 				 group by tag_id order by tag_order";
 
-			$sql = new SqlManager();
-			$res = $sql->prepared($query, $marker, $ids);
+			$res = $this->_sql->prepared($query, $marker, $ids);
 		} catch (Exception $e) {
 			$res = array();
 		}

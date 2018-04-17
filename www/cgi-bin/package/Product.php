@@ -35,9 +35,14 @@ class Product {
 	private $_sql;		// データベースサーバーへの接続を表すオブジェクト
 	private $_curDate;	// 抽出条件に使用する日付(0000-00-00)。NULL(default)は今日
 	
-	public function __construct(string $curDate=''){
-		$this->curDate = $this->validDate($curDate);
-		$this->_sql = new SqlManager();
+	
+	/**
+	 * param {string} db データベース名
+	 * param {string} curDate 抽出条件に使用する日付(0000-00-00)。NULL(default)は今日
+	 */
+	public function __construct(string $db, string $curDate=''){
+		$this->_curDate = $this->validDate($curDate);
+		$this->_sql = new SqlManager($db);
 	}
 	
 	
@@ -56,7 +61,7 @@ class Product {
 			$query = "select category_id as id, category_key as code, category_name as name 
 			from category inner join catalog on category.id=catalog.category_id 
 			where catalogapply<=? and catalogdate>? group by category.id";
-			$res = $this->_sql->prepared($query, "ss", array($this->curDate, $this->curDate));
+			$res = $this->_sql->prepared($query, "ss", array($this->_curDate, $this->_curDate));
 		}catch(Exception $e){
 			$res = array();
 		}
@@ -74,7 +79,7 @@ class Product {
 			maker_id, oz, print_group_id as surcharge_id, item_group1_id as volumerange_id, item_group2_id as silkscreen_id 
 			from item
 			where id=? and itemapply<=? and itemdate>?";
-			$res = $this->_sql->prepared($query, "iss", array($id, $this->curDate, $this->curDate));
+			$res = $this->_sql->prepared($query, "iss", array($id, $this->_curDate, $this->_curDate));
 		}catch(Exception $e){
 			$res = array();
 		}
@@ -117,7 +122,7 @@ class Product {
 			 where lineup=1 and color_lineup=1 and catalog.color_code!='000' and catalogapply<=? and catalogdate>? and 
 			 itemapply<=? and itemdate>? and itempriceapply<=? and itempricedate>?";
 			$marker = 'ssssss';
-			$param = array_fill(0, 6, $this->curDate);
+			$param = array_fill(0, 6, $this->_curDate);
 			$l = count($ary);
 			if ($l>0) {
 				$query .= " and item.id in (".implode( ' , ', array_fill(0, $l, '?') ).")";
@@ -185,7 +190,7 @@ class Product {
 				$res[$i]['reviews'] = $review[0]['review_count'];
 				
 				// size
-				$size = $this->_sql->prepared($querySize, 'iss', array($res[$i]['item_id'], $this->curDate, $this->curDate) );
+				$size = $this->_sql->prepared($querySize, 'iss', array($res[$i]['item_id'], $this->_curDate, $this->_curDate) );
 				$res[$i]['sizename_from'] = $sizeName[$size[0]['minsize']];
 				$res[$i]['sizename_to'] = $sizeName[$size[0]['maxsize']];
 				$res[$i]['sizes'] = $size[0]['sizes'];
@@ -242,7 +247,7 @@ class Product {
 			}
 			$query .= " where itemapply<=? and itemdate>? group by item.id;";
 			$marker .= 'ss';
-			$param = array_merge($tag, array($this->curDate, $this->curDate));
+			$param = array_merge($tag, array($this->_curDate, $this->_curDate));
 			$rec = $this->_sql->prepared($query, $marker, $param);
 			$ids = array_column($rec, 'itemid');
 			$res = $this->getItemList(0, $ids, $sort, $limit);
@@ -273,7 +278,7 @@ class Product {
 			}
 			$query .= " where itemapply<=? and itemdate>? group by item.id;";
 			$marker .= 'ss';
-			$param = array_merge($tag, array($this->curDate, $this->curDate));
+			$param = array_merge($tag, array($this->_curDate, $this->_curDate));
 			$rec = $this->_sql->prepared($query, $marker, $param);
 			$ids = array_column($rec, 'itemid');
 			$res = $this->getItemList(0, $ids, $sort, $limit);
@@ -327,7 +332,7 @@ class Product {
 			inner join category on catalog.category_id=category.id)
 			inner join itemcolor on color_id=itemcolor.id 
 			where item_id=? and catalogapply<=? and catalogdate>? and color_lineup=1 order by color_code";
-			$res = $this->_sql->prepared($query, "iss", array($id, $this->curDate, $this->curDate));
+			$res = $this->_sql->prepared($query, "iss", array($id, $this->_curDate, $this->_curDate));
 		}catch(Exception $e){
 			$res = array();
 		}
@@ -368,7 +373,7 @@ class Product {
 			itemsizeapply<=? and itemsizedate>? and itempriceapply<=? and itempricedate>? and 
 			color_lineup=1 and itemsize.size_lineup=1 group by size.id order by size_row";
 			$ary1 = array($id, $colorCode);
-			$ary2 = array_fill(0, 6, $this->curDate);
+			$ary2 = array_fill(0, 6, $this->_curDate);
 			$param = array_merge($ary1, $ary2);
 			$res = $this->_sql->prepared($query, "isssssss", $param);
 		}catch(Exception $e){
@@ -415,7 +420,7 @@ class Product {
 				itemsizeapply<=? and itemsizedate>? and itempriceapply<=? and itempricedate>? and 
 				color_lineup=1 and itemsize.size_lineup=1 group by size.id order by null";
 				$ary1 = array($margin, $margin, $id, $colorCode);
-				$ary2 = array_fill(0, 6, $this->curDate);
+				$ary2 = array_fill(0, 6, $this->_curDate);
 				$param = array_merge($ary1, $ary2);
 				$res = $this->_sql->prepared($query, "ddisssssss", $param);
 			}else{
@@ -429,7 +434,7 @@ class Product {
 				itemsizeapply<=? and itemsizedate>? and itempriceapply<=? and itempricedate>? and 
 				color_lineup=1 and itemsize.size_lineup=1 group by size.id order by null";
 				$ary1 = array($id, $colorCode);
-				$ary2 = array_fill(0, 6, $this->curDate);
+				$ary2 = array_fill(0, 6, $this->_curDate);
 				$param = array_merge($ary1, $ary2);
 				$res = $this->_sql->prepared($query, "isssssss", $param);
 			}
@@ -481,7 +486,7 @@ class Product {
 			i_note_label as label, i_note as note from item 
 			inner join itemdetail on item.item_code=itemdetail.item_code 
 			where item.id=? and itemapply<=? and itemdate>?";
-			$res = $this->_sql->prepared($query, "iss", array($id, $this->curDate, $this->curDate));
+			$res = $this->_sql->prepared($query, "iss", array($id, $this->_curDate, $this->_curDate));
 		}catch(Exception $e){
 			$res = array();
 		}
@@ -497,7 +502,7 @@ class Product {
 	public function salesTax(): int {
 		try {
 			$query = "select taxratio from salestax where taxapply=(select max(taxapply) from salestax where taxapply<=?)";
-			$r = $this->_sql->prepared($query, "s", array($this->curDate));
+			$r = $this->_sql->prepared($query, "s", array($this->_curDate));
 			if (empty($r)) throw new Exception();
 			$res = $r[0]['taxratio'];
 		} catch (Exception $e) {
@@ -509,7 +514,7 @@ class Product {
 	
 	/**
 	* 日付の妥当性
-	* @param {string} curdate 日付(0000-00-00)
+	* @param {string} args 日付(0000-00-00)
 	* @return {string} 日付(0000-00-00)。不正値の場合は今日の日付
 	*/
 	private function validDate(string $args): string {

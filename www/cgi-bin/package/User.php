@@ -22,12 +22,39 @@ use package\db\SqlManager;
 class User {
 
 	private $_sql;		// データベースサーバーへの接続を表すオブジェクト
-	
-	public function __construct(string $curDate=''){
-		$this->_sql = new SqlManager();
+	private $_curDate;	// 抽出条件に使用する日付(0000-00-00)。NULL(default)は今日
+
+
+	/**
+	 * param {string} db データベース名
+	 * param {string} curDate 抽出条件に使用する日付(0000-00-00)。NULL(default)は今日
+	 */
+	public function __construct(string $db, string $curDate=''){
+		$this->_curDate = $this->validDate($curDate);
+		$this->_sql = new SqlManager($db);
 	}
 	
 	public function __destruct() {}
+
+
+	/**
+	* 日付の妥当性
+	* @param {string} args 日付(0000-00-00)
+	* @param {string} def 日付(0000-00-00) 不正値の場合に返す日付
+	* @return {string} 日付(0000-00-00)。不正値の場合は今日の日付
+	*/
+	private function validDate(string $args, string $def=''): string {
+		if (empty($args)) {
+			$res = empty($def)? date('Y-m-d'): $def;
+		} else {
+			$res = str_replace("/", "-", $args);
+			$d = explode('-', $res);
+			if (checkdate($d[1], $d[2], $d[0])===false) {
+				$res = empty($def)? date('Y-m-d'): $def;
+			}
+		}
+		return $res;
+	}
 
 
 	/**
@@ -180,25 +207,8 @@ class User {
 			$query .= " group by customer_id";
 			$query .= " order by cstprefix desc, order_count desc, total_price desc";
 
-			if($start){
-				$start = str_replace("/", "-", $start);
-				$d = explode('-', $start);
-				if(checkdate($d[1], $d[2], $d[0])==false){
-					$start = "2011-06-05";
-				}
-			}else{
-				$start = "2011-06-05";
-			}
-
-			if($end){
-				$end = str_replace("/", "-", $end);
-				$d = explode('-', $end);
-				if(checkdate($d[1], $d[2], $d[0])==false){
-					$end = date('Y-m-d');
-				}
-			}else{
-				$end = date('Y-m-d');
-			}
+			$start = $this->validDate($start, '2011-06-05');
+			$end = $this->validDate($end);
 
 			$param = array($start, $end);
 			if (!empty($id)) {

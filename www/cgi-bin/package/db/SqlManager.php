@@ -13,8 +13,13 @@ use \mysqli;
 use \Exception;
 class SqlManager {
 	private $_cn;	// データベースサーバーへの接続を表すmysqliオブジェクト
+	private $_db;	// データベース名
 	
-	public function __construct() {
+	/**
+	 * param {string} db データベース名
+	 */
+	public function __construct($db) {
+		$this->_db = $db;
 		$this->dbConnect();
 	}
 	
@@ -30,7 +35,7 @@ class SqlManager {
 	 * SQLの接続
 	 */
 	protected function dbConnect() {
-		$conn = new mysqli(_DB_HOST, _DB_USER, _DB_PASS, _DB_NAME);
+		$conn = new mysqli(_DB_HOST, _DB_USER, _DB_PASS, $this->_db);
 		if (mysqli_connect_error()) {
 			die('DB Connect Error: '.mysqli_connect_error());
 		}
