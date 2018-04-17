@@ -54,7 +54,8 @@ define('_MEMBER_HOSTS', array(_ACCESS_TOKEN=>array('www.takahama428.com', 'test.
 define('_DB_USER', 'tlauser');
 define('_DB_PASS', 'crystal428');
 define('_DB_HOST', 'localhost');
-define('_DB_NAME', 'tladata1');
+define('_DB_NAME', 'tladata1');			// 公開
+define('_DB_NAME_DEV', 'tladata2');		// テスト開発環境
 
 // Sales Tax 0:非課税, 1:外税, 2:内税
 define('_TAX_CLASS', 1);
