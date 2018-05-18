@@ -96,7 +96,7 @@ class Product {
 	 * @param {string} limit 取得するレコード数を制限、{@code 'offset-length'}
 	 * @return {array} 各アイテムのデータ
 	 * [category_key, category_name, item_id, item_name, item_code, cost, pos_id, maker_id, 
-	 *  oz, colors, i_color_code, i_caption, reviews, sizename_from, sizename_to, range_id, screen_id]
+	 *  oz, colors, i_color_code, i_caption, reviews, avg_votes, sizename_from, sizename_to, range_id, screen_id]
 	 */
 	private function getItemList(int $id=0, array $ary=array(), string $sort='popular', string $limit=''): array {
 		try{
@@ -166,7 +166,7 @@ class Product {
 			if ($l==0) throw new Exception();
 			
 			// itemreview count
-			$queryReview = "select count(*) as review_count from itemreview where item_id=?";
+			$queryReview = "select count(*) as review_count, avg(vote) as avg_votes from itemreview where item_id=?";
 			
 			// item size min,max,count
 			$querySize = "select count(*) as sizes, max(size_row) as maxsize, min(size_row) as minsize from 
@@ -188,6 +188,7 @@ class Product {
 				// review count
 				$review = $this->_sql->prepared($queryReview, 'i', array($res[$i]['item_id']) );
 				$res[$i]['reviews'] = $review[0]['review_count'];
+				$res[$i]['avg_votes'] = $review[0]['avg_votes'];
 				
 				// size
 				$size = $this->_sql->prepared($querySize, 'iss', array($res[$i]['item_id'], $this->_curDate, $this->_curDate) );
