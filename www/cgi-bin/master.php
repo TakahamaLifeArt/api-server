@@ -1411,15 +1411,16 @@ class Master{
 			$conn = db_connect();
 			mysqli_query($conn, 'BEGIN');
 			foreach($data as $key=>$val){
+				if ($key=='a17') {
+					$info[$key]	= $val;
+					continue;
+				}
 				$info[$key]	= quote_smart($conn, $val);
 			}
 			$info["enq1date"] = date('Y-m-d H:i:s');
 			
-			// checkbox
-			$a17 = '';
-			for ($i=0; $i<count($info['ans17']); $i++) {
-				$a17 = implode(',', $info['a17']);
-			}
+			// checkbox複数選択
+			$a17 = implode(',', $info['a17']);
 			
 			// アンケート結果の登録
 			$sql = sprintf("INSERT INTO enquete1(ans1,ans2,ans3,ans4,ans5,ans6,ans7,ans8,ans9,ans10,ans11,ans12,ans13,ans14,
