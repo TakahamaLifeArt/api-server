@@ -44,8 +44,16 @@ try {
 		if (!empty($param['m'])) {
 			$m = explode('/', $param['m']);
 		}
+
+		$domain = explode('.', $host);
+		$hostName = $domain[0];
+		if ($hostName !== 'test') {
+			$db = _DB_NAME;
+		} else {
+			$db = _DB_NAME_DEV;
+		}
 		
-		$pro = new Product();
+		$pro = new Product($db);
 		switch ($param['r']) {
 			case 'categories':
 				if ($method==='GET') {
@@ -78,7 +86,7 @@ try {
 					if (empty($m[0])) {
 						if (empty($param['args'])) throw new Exception('400');
 						$ids = $param['args'];
-						$tag = new ItemTag();
+						$tag = new ItemTag($db);
 					} else {
 						if (empty($param['args'])) {
 							$ids[] = $m[0];
@@ -86,7 +94,7 @@ try {
 							array_unshift($param['args'], $m[0]);
 							$ids = $param['args'];
 						}
-						$tag = new CategoryTag();
+						$tag = new CategoryTag($db);
 					}
 					$res = $pro->getItemTag($tag, ...$ids);		// 可変長引数
 				}
@@ -195,7 +203,7 @@ try {
 				}
 				break;
 			case 'users':
-				$user = new User();
+				$user = new User($db);
 				if ($method==='GET') {
 				/**
 				 * /users/メールアドレス
@@ -254,9 +262,16 @@ try {
 				if ($method==='GET') {
 				/**
 				 * /delivery/納期のtimestamp(sec)
+				 * /delivery/
 				 */
 					$deli = new Delivery();
-					$res = $deli->getWorkDay($m[0]);
+					if (empty($param['args'])) {
+						$res = $deli->getWorkDay($m[0]);
+					} else {
+						for ($i=0, $len=count($param['args']['workday']); $i<$len; $i++) {
+							$res[$i] = $deli->getDelidate((int)$param['args']['basesec'], (int)$param['args']['workday'][$i], (int)$param['args']['transport'], (int)$param['args']['extraday']);
+						}
+					}
 				}
 				break;
 			default:
