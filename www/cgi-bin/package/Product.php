@@ -95,7 +95,7 @@ class Product {
 	 * @param {string} sort 表示順を指定、popular|''(人気), low(廉価), high(高価), desc(レビュー数降順), asc(レビュー数昇順), heavy(生地が厚い), light(生地が薄い)
 	 * @param {string} limit 取得するレコード数を制限、{@code 'offset-length'}
 	 * @return {array} 各アイテムのデータ
-	 * [category_key, category_name, item_id, item_name, item_code, cost, pos_id, maker_id, 
+	 * [category_key, category_name, item_id, item_name, item_code, cost, pos_id, maker_id, brand_id, brand_name, 
 	 *  oz, colors, i_color_code, i_caption, reviews, avg_votes, sizename_from, sizename_to, range_id, screen_id]
 	 */
 	private function getItemList(int $id=0, array $ary=array(), string $sort='popular', string $limit=''): array {
@@ -114,12 +114,15 @@ class Product {
 			$query = "select category_key, category_name, item.id as item_id, item_name, item.item_code as item_code, 
 			min(truncate(price_1*margin_pvt*(1+".$tax.")+9,-1)) as cost, item.printposition_id as pos_id, 
 			item_row, maker_id, oz, count(distinct(catalog.id)) as colors, i_color_code, i_caption, 
-			item_group1_id as range_id, item_group2_id as screen_id from (((item
+			tagid as brand_id, tag_name as brand_name,
+			item_group1_id as range_id, item_group2_id as screen_id from (((((item
 			 inner join catalog on item.id=catalog.item_id)
 			 inner join category on catalog.category_id=category.id)
 			 inner join itemprice on item.id=itemprice.item_id)
-			 inner join itemdetail on item.item_code=itemdetail.item_code
-			 where lineup=1 and color_lineup=1 and catalog.color_code!='000' and catalogapply<=? and catalogdate>? and 
+			 inner join itemdetail on item.item_code=itemdetail.item_code)
+			 inner join itemtag on tag_itemid=item.id)
+			 inner join tags on tag_id=tagid
+			 where lineup=1 and color_lineup=1 and tag_type=7 and catalog.color_code!='000' and catalogapply<=? and catalogdate>? and 
 			 itemapply<=? and itemdate>? and itempriceapply<=? and itempricedate>?";
 			$marker = 'ssssss';
 			$param = array_fill(0, 6, $this->_curDate);
