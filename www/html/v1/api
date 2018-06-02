@@ -52,15 +52,94 @@ if(isset($_REQUEST['act'])){
 		break;
 
 
+	case 'printfee2':
+	/**
+	 * sweatjack
+	 */
+	 	// シートサイズ
+		$sheetsize = '1';
+		if(isset($_REQUEST['sheetsize'])){
+			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
+				$sheetsize = $_REQUEST['sheetsize'];
+			}
+		}
+		
+		// インクジェット可能なアイテムIDを取得
+		$ids = $mst->itemIdOf(85, NULL, "tag");
+
+		// 計算クラスのインスタンス
+		$curdate = date('Y-m-d');
+		$calc = new Calc($curdate, $sheetsize);
+
+		if (isset($_REQUEST['printmethod'])) {
+			/**
+			 * オンライン見積もり（/estimate/estimate1.php）
+			 */
+			$args = $_REQUEST['args'];
+			switch ($_REQUEST['printmethod']) {
+				case 'silk':
+					$dat = $calc->calcSilkPrintFee($args['vol'], $args['ink'], $args['ids'], $args['size'], $args['repeat']);
+					break;
+				case 'digit': 
+					$dat = $calc->calcDigitFee($args['vol'], $args['size'], $args['ids'], $args['repeat']);
+					break;
+				case 'inkjet':
+					$dat = $calc->calcInkjetFee($args['opt'], $args['vol'], $args['size'], $args['ids']);
+					break;
+				case 'cutting':
+					$dat = $calc->calcCuttingFee($args['vol'], $args['size'], $args['ids']);
+					break;
+				case 'embroidery':
+					$dat = $calc->calcEmbroideryFee($args['opt'], $args['vol'], $args['size'], $args['ids'], $args['repeat']);
+					break;
+				default: $dat = 0;
+			}
+		} else if (isset($_REQUEST['itemid'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])) {
+			for ($i=0; $i<count($_REQUEST['amount']); $i++) {
+				$isInkjet = in_array($_REQUEST['itemid'][$i], $ids);
+				if (isset($_REQUEST['color'])) {
+					$inkjetOption = $_REQUEST['color'][$i]!='ホワイト'? 1: 0;
+				} else {
+					$inkjetOption = 0;
+				}
+				$args[$i] = array(
+					'itemid'=>$_REQUEST['itemid'][$i],
+					'amount'=>$_REQUEST['amount'][$i],
+					'ink'=>$_REQUEST['ink'][$i],
+					'pos'=>$_REQUEST['pos'][$i],
+					'inkjet'=>$isInkjet,
+					'option'=>array($inkjetOption=>$_REQUEST['amount'][$i]),
+				);
+			}
+			$dat=$calc->printfee2($args);
+		} else if (isset($_REQUEST['args'])) {
+			for ($i=0; $i<count($_REQUEST['args']); $i++) {
+				$_REQUEST['args'][$i]['inkjet'] = in_array($_REQUEST['args'][$i]['itemid'], $ids);
+				if (! array_key_exists('option', $_REQUEST['args'][$i])) {
+					$_REQUEST['args'][$i]['option'] = array($_REQUEST['args'][$i]['amount']);
+				}
+				if (array_key_exists('itemcode', $_REQUEST['args'][$i])) {
+					$_REQUEST['args'][$i]['itemid'] = $mst->getItemID($_REQUEST['args'][$i]['itemcode']);
+				}
+			}
+			$dat=$calc->printfee2($_REQUEST['args']);
+		} else {
+			$dat = array('printfee'=>'0');
+		}
+
+		break;
+	
 	case 'printfee':
 	/**
-	 * 428HP 申し込み（/order）
+	 * 428HP （未使用）
+	 *		 申し込み（/order）
 	 * 		 料金の目安（/price/js/standard.js）
 	 *		 アイテム詳細（/items/js/estimate_sole.js）
 	 *		 シーン別（/scene/js/estimate_sole.js）
 	 *		 ホーム（/js/top.js）
-	 * staff-tshirt
-	 * sweatjack
+	 * staff-tshirt （未使用）
+	 * sweatjack （未使用）
+	 *
 	 * 受注システム
 	 *
 	 * @itemid		アイテムID
@@ -86,16 +165,18 @@ if(isset($_REQUEST['act'])){
 		/**
 		 * Webサイトからリクエスト
 		 */
-			$curdate = date('Y-m-d');
+		 	$dat = array('printfee'=>'0');
+		 	break;
+			
 			// 2017-05-25 00:00:00 から仕様変更
-			if (strtotime('2017-05-25 00:00:00') <= time()) {
-				$isSpecVer2 = true;
-			} else {
-				$isSpecVer2 = false;
-			}
+			// if (strtotime('2017-05-25 00:00:00') <= time()) {
+			// 	$isSpecVer2 = true;
+			// } else {
+			// 	$isSpecVer2 = false;
+			// }
 			
 			// インクジェット可能なアイテムIDを取得
-			$ids = $mst->itemIdOf(85, NULL, "tag");
+			// $ids = $mst->itemIdOf(85, NULL, "tag");
 		} else {
 		/**
 		* 受注システムからリクエスト
