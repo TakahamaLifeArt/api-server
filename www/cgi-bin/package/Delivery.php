@@ -9,8 +9,8 @@
 declare(strict_types=1);
 namespace package;
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/config.php';
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/jd/japaneseDate.php';
-use \japaneseDate;
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/holiday/japaneseDate.php';
+use package\holiday\japaneseDate;
 use \Exception;
 class Delivery {
 
@@ -90,15 +90,15 @@ class Delivery {
 				$baseSec += $one_day;
 			}
 
-			// 配送日数
-			$baseSec += ($one_day * $transpor);
+			// 配送日数（通常は作業日数に配送日数の１日も入っているため）
+			$baseSec += ($one_day * (--$transpot));
 
 			// お届け日の日付情報
 			$fin = $hi->makeDateArray($baseSec);
 
 			// 曜日を取得
 			$weekday = $hi->viewWeekday($fin['Weekday']);
-			$fin['weekname'] = $weekday;
+			$fin['Weekname'] = $weekday;
 		} catch (Exception $e) {
 			$fin = array();
 		}
@@ -115,14 +115,15 @@ class Delivery {
 	public function makeDateArray($time_stamp)
 	{
 		$res = array(
-			"Year"    => $this->getYear($time_stamp), 
-			"Month"   => $this->getMonth($time_stamp), 
+			"Year"    => $this->getYear($time_stamp),
+			"Month"   => $this->getMonth($time_stamp),
 			"Day"     => $this->getDay($time_stamp),
-			"Weekday" => $this->getWeekday($time_stamp), 
+			"Weekday" => $this->getWeekday($time_stamp),
 		);
 
 		$holiday_list = $this->getHolidayList($time_stamp);
 		$res["Holiday"] = isset($holiday_list[$res["Day"]]) ? $holiday_list[$res["Day"]] : JD_NO_HOLIDAY;
+		$res["Weekname"] = $this->viewWeekday($res["Weekday"]);
 		return $res;
 	}
 }
