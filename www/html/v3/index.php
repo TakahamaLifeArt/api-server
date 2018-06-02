@@ -274,6 +274,15 @@ try {
 					}
 				}
 				break;
+			case 'holiday':
+				if ($method==='GET') {
+				/**
+				 * /holiday/timestamp(sec)
+				 */
+					$deli = new Delivery();
+					$res = $deli->makeDateArray($m[0]);
+				}
+				break;
 			default:
 				throw new Exception('404');
 		}
