@@ -95,19 +95,19 @@ class Members Extends MYDB2 {
 	
 	/**
 	*	注文履歴を取得（注文確定）
-	*	@args	customer ID
+	*	@args	 customer ID
+	*	@orderId 受注No.
 	*
 	*	return	[注文情報]
 	*/
-	public function getOrderHistory($args){
-		try{
+	public function getOrderHistory($args, $orderId = 0) {
+		try {
 			$rs = array();
 			if(empty($args)) return;
 			
 			$conn = self::db_connect();
 		//通常の注文履歴（注文確定のデータのみ）
-		 if(strpos($args, ",no_progress") == false) {
-			
+		 if (strpos($args, ",no_progress") == false) {
 			$sql = "SELECT orders.id as orderid, schedule2, schedule3, order_amount, amount, payment,
 			 shipped, deposit, progress_id, progressname, estimated, imagecheck,
 			 coalesce(item.item_name,orderitemext.item_name) as item, 
@@ -132,14 +132,18 @@ class Members Extends MYDB2 {
 			 left join itemcolor on catalog.color_id=itemcolor.id)
 			 left join itemprice on item.id=itemprice.item_id)
 			 
-			 left join category on catalog.category_id=category.id";
-	 		 $sql .= " WHERE created>'2011-06-05' and progress_id=4 and ordertype='general'";
-			 $sql .= " and (itemprice.size_from=size.id || size.id is null)
+			 left join category on catalog.category_id=category.id
+	 		 WHERE created>'2011-06-05' and progress_id=4 and ordertype='general'
+			 and (itemprice.size_from=size.id || size.id is null)
 			 and ((itemapply<=schedule2 and itemdate>schedule2) || itemapply is null)
 			 and ((itempriceapply<=schedule2 and itempricedate>schedule2) || itempriceapply is null)
 			 and ((catalogapply<=schedule2 and catalogdate>schedule2) || catalogapply is null)
 			 and taxapply=(select max(taxapply) from salestax where taxapply<=schedule3)
-			 and customer.id=? order by orders.id";
+			 and customer.id=?";
+			if (!empty($orderId)) {
+				$sql .= " and orders.id=?";
+			}
+			 $sql .= " order by orders.id";
 		 } else {
 		//イメージ画像表示用の注文履歴（注文確定のデータ以外でも検索）
 			
@@ -164,29 +168,37 @@ class Members Extends MYDB2 {
 			 left join itemcolor on catalog.color_id=itemcolor.id)
 			 left join itemprice on item.id=itemprice.item_id)
 			 
-			 left join category on catalog.category_id=category.id";
-	 		 $sql .= " WHERE created>'2011-06-05' and ordertype='general'";
-			 $sql .= " and (itemprice.size_from=size.id || size.id is null)
-			 and customer.id=? order by orders.id";
-				$args = str_replace(",no_progress","",$args);
+			 left join category on catalog.category_id=category.id
+	 		 WHERE created>'2011-06-05' and ordertype='general'
+			 and (itemprice.size_from=size.id || size.id is null)
+			 and customer.id=?";
+			if (!empty($orderId)) {
+				$sql .= " and orders.id=?";
+			}
+			 $sql .= " order by orders.id";
+			$args = str_replace(",no_progress","",$args);
 		 }
 			
 			$stmt = $conn->prepare($sql);
-			$stmt->bind_param("i", $args);
+			if (empty($orderId)) {
+				$stmt->bind_param("i", $args);
+			} else {
+				$stmt->bind_param("ii", $args, $orderId);
+			}
 			$stmt->execute();
 			$stmt->store_result();
 			$rec = self::fetchAll($stmt);
 			
 			$idx = -1;
-			for($i=0; $i<count($rec); $i++){
+			for ($i=0, $len=count($rec); $i<$len; $i++) {
 				/*
 				 * 2016-04-11 修正
-			 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_0*margin_pvt*(1+(taxratio/100))+9,-1) else truncate(price_0*margin_pvt+9,-1) end) as price_color,
-			 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_1*margin_pvt*(1+(taxratio/100))+9,-1) else truncate(price_1*margin_pvt+9,-1) end) as price_white,
-			 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_0*'._MARGIN_1.'*(1+(taxratio/100))+9,-1) else truncate(price_0*'._MARGIN_1.'+9,-1) end) as price_color_over149,
-			 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_1*'._MARGIN_1.'*(1+(taxratio/100))+9,-1) else truncate(price_1*'._MARGIN_1.'+9,-1) end) as price_white_over149,
-			 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_0*'._MARGIN_2.'*(1+(taxratio/100))+9,-1) else truncate(price_0*'._MARGIN_2.'+9,-1) end) as price_color_over299,
-			 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_1*'._MARGIN_2.'*(1+(taxratio/100))+9,-1) else truncate(price_1*'._MARGIN_2.'+9,-1) end) as price_white_over299,
+				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_0*margin_pvt*(1+(taxratio/100))+9,-1) else truncate(price_0*margin_pvt+9,-1) end) as price_color,
+				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_1*margin_pvt*(1+(taxratio/100))+9,-1) else truncate(price_1*margin_pvt+9,-1) end) as price_white,
+				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_0*'._MARGIN_1.'*(1+(taxratio/100))+9,-1) else truncate(price_0*'._MARGIN_1.'+9,-1) end) as price_color_over149,
+				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_1*'._MARGIN_1.'*(1+(taxratio/100))+9,-1) else truncate(price_1*'._MARGIN_1.'+9,-1) end) as price_white_over149,
+				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_0*'._MARGIN_2.'*(1+(taxratio/100))+9,-1) else truncate(price_0*'._MARGIN_2.'+9,-1) end) as price_color_over299,
+				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_1*'._MARGIN_2.'*(1+(taxratio/100))+9,-1) else truncate(price_1*'._MARGIN_2.'+9,-1) end) as price_white_over299,
 				 
 				if(isset($rec[$i]['price'])){
 					$costHash = array($rec[$i]['price']);
@@ -209,13 +221,13 @@ class Members Extends MYDB2 {
 				}
 				*/
 				
-				if($rec[$i]['master_id']==0){
+				if ($rec[$i]['master_id']==0) {
 					$cost = $rec[$i]['price'];
-				}else{
+				} else {
 					$cost = $rec[$i]['item_cost'];
 				}
 				
-				if($curid!=$rec[$i]['orderid']){
+				if ($curid!=$rec[$i]['orderid']) {
 					$curid = $rec[$i]['orderid'];
 					++$idx;
 					$rs[$idx] = $rec[$i];	// common data
@@ -235,12 +247,13 @@ class Members Extends MYDB2 {
 																						 'item_group2_id'=>$rec[$i]['item_group2_id'],
 																						);
 					$rs[$idx]['itemamount'][$rec[$i]['item']] = $rec[$i]['amount'];	// アイテム毎の枚数
-				}else{
+				} else {
+					// 同じアイテムをの有無をチェック
 					$isExist = false;
-					if(isset($rs[$idx]['itemlist'][$rec[$i]['item']][$rec[$i]['color']])){	// 同じアイテムをの有無をチェック
+					if (isset($rs[$idx]['itemlist'][$rec[$i]['item']][$rec[$i]['color']])) {
 						$tmp = $rs[$idx]['itemlist'][$rec[$i]['item']][$rec[$i]['color']];
-						for($t=0; $t<count($tmp); $t++){
-							if($tmp[$t]['size']==$rec[$i]['size']){
+						for ($t=0; $t<count($tmp); $t++) {
+							if ($tmp[$t]['size']==$rec[$i]['size']) {
 								$isExist = true;
 								break;
 							}
@@ -248,7 +261,7 @@ class Members Extends MYDB2 {
 					}
 					
 					// サイズかカラーが違う又は、初めてのアイテムの場合
-					if(!$isExist){
+					if (!$isExist) {
 						$rs[$idx]['itemlist'][$rec[$i]['item']][$rec[$i]['color']][] = array('volume'=>$rec[$i]['amount'], 
 																							 'size'=>$rec[$i]['size'],
 																							 'categorykey'=>$rec[$i]['category_key'],
@@ -269,7 +282,7 @@ class Members Extends MYDB2 {
 				}
 			}
 			
-		}catch(Exception $e){
+		} catch (Exception $e) {
 			$rs = '';
 		}
 		

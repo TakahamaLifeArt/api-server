@@ -622,7 +622,7 @@ if(isset($_REQUEST['act'])){
 		
 	case 'getorderhistory':
 		$tla = new Members();
-		if(isset($_REQUEST['args'])) $dat=$tla->getOrderHistory($_REQUEST['args']);
+		if(isset($_REQUEST['args'])) $dat=$tla->getOrderHistory($_REQUEST['args'], $_REQUEST['id']);
 		break;
 		
 	case 'getdetailsprint':
