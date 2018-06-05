@@ -97,10 +97,11 @@ class Members Extends MYDB2 {
 	*	注文履歴を取得（注文確定）
 	*	@args	 customer ID
 	*	@orderId 受注No.
+	*	@shipped 0:全て, 1:未発送, 2:発送済み
 	*
 	*	return	[注文情報]
 	*/
-	public function getOrderHistory($args, $orderId = 0) {
+	public function getOrderHistory($args, $orderId=0, $shipped=0) {
 		try {
 			$rs = array();
 			if(empty($args)) return;
@@ -143,6 +144,9 @@ class Members Extends MYDB2 {
 			if (!empty($orderId)) {
 				$sql .= " and orders.id=?";
 			}
+			if (!empty($shipped)) {
+				$sql .= " and shipped=?";
+			}
 			 $sql .= " order by orders.id";
 		 } else {
 		//イメージ画像表示用の注文履歴（注文確定のデータ以外でも検索）
@@ -175,15 +179,24 @@ class Members Extends MYDB2 {
 			if (!empty($orderId)) {
 				$sql .= " and orders.id=?";
 			}
+			if (!empty($shipped)) {
+				$sql .= " and shipped=?";
+			}
 			 $sql .= " order by orders.id";
 			$args = str_replace(",no_progress","",$args);
 		 }
 			
 			$stmt = $conn->prepare($sql);
-			if (empty($orderId)) {
-				$stmt->bind_param("i", $args);
+			if (!empty($orderId)) {
+				if (!empty($shipped)) {
+					$stmt->bind_param("iii", $args, $orderId, $shipped);
+				} else {
+					$stmt->bind_param("ii", $args, $orderId);
+				}
+			} else if (!empty($shipped)) {
+				$stmt->bind_param("ii", $args, $shipped);
 			} else {
-				$stmt->bind_param("ii", $args, $orderId);
+				$stmt->bind_param("i", $args);
 			}
 			$stmt->execute();
 			$stmt->store_result();
