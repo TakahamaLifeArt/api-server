@@ -7,11 +7,14 @@
 *	Aメール：	サービス開始から初めての注文
 *	Bメール：	前回の注文からの経過日が180日未満（A若しくはBメールが進行中の時）に注文があった場合
 *	Cメール：	サービス開始から1度以上注文があるが直近の注文から180日以上経過している
+*
+*	廃止
 */
 
 require_once 'http.php';
 require_once 'conndb.php';
 require_once 'followmailtext.php';
+use package\holiday\DateJa;
 
 class Followmail {
 
@@ -104,14 +107,14 @@ exit;
 
 // お届日（schedule4）を基準
 $inst = new Followmail();
-$jd = new japaneseDate();
+$ja = new DateJa();
 $conn = new ConnDB();
 $one_day = 86400;
 
 // 到着確認メール（3日前にお届け予定になっている確定注文）
 $baseSec = time();
 $baseSec -= ($one_day*3);
-$fin = $jd->makeDateArray($baseSec);
+$fin = $ja->makeDateArray($baseSec);
 $targetDay = $fin['Year'].'-'.$fin['Month'].'-'.$fin['Day'];
 
 $result = $conn->getFollowMailInfo(array('schedule4'=>$targetDay, 'mode'=>'arrival'));
@@ -125,7 +128,7 @@ for($m=1; $m<6; $m++){
 	$term = 30*$m;	// 30日間隔
 	$baseSec = time();
 	$baseSec -= ($one_day*$term);
-	$fin = $jd->makeDateArray($baseSec);
+	$fin = $ja->makeDateArray($baseSec);
 	$targetDay = $fin['Year'].'-'.$fin['Month'].'-'.$fin['Day'];
 	
 	$result = $conn->getFollowMailInfo(array('schedule4'=>$targetDay, 'mode'=>null));

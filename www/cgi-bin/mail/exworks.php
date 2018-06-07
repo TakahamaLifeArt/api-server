@@ -5,13 +5,14 @@
 */
 
 require_once dirname(__FILE__).'/exwmail.php';
+use package\holiday\DateJa;
 
 // 休業日の場合は何もしない
-$jd = new japaneseDate();
+$ja = new DateJa();
 $_from_holiday = strtotime(_FROM_HOLIDAY);
 $_to_holiday	= strtotime(_TO_HOLIDAY);
 $baseSec = time();
-$fin = $jd->makeDateArray($baseSec);
+$fin = $ja->makeDateArray($baseSec);
 if( (($fin['Weekday']==0 || $fin['Weekday']==6) || $fin['Holiday']!=0) || ($baseSec>=$_from_holiday && $_to_holiday>=$baseSec) ){
 	exit;
 }

@@ -15,7 +15,7 @@
 
 require_once dirname(__FILE__).'/../config.php';
 require_once dirname(__FILE__).'/../MYDB2.php';
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/holiday/japaneseDate.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/holiday/DateJa.php';
 
 class ConnDB extends MYDB2{
 

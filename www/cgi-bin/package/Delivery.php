@@ -9,8 +9,8 @@
 declare(strict_types=1);
 namespace package;
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/config.php';
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/holiday/japaneseDate.php';
-use package\holiday\japaneseDate;
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/holiday/DateJa.php';
+use package\holiday\DateJa;
 use \Exception;
 class Delivery {
 
@@ -28,7 +28,7 @@ class Delivery {
 		try {
 			$_from_holiday = strtotime(_FROM_HOLIDAY);				// お休み開始日
 			$_to_holiday	= strtotime(_TO_HOLIDAY);				// お休み最終日
-			$hi = new japaneseDate();
+			$ja = new DateJa();
 			$workday = 0;
 			$one_day = 86400;
 
@@ -40,7 +40,7 @@ class Delivery {
 			$baseSec = mktime(0, 0, 0, (int)$month, (int)$day, (int)$year);
 
 			while ($baseSec < $targetSec) {
-				$fin = $hi->makeDateArray($baseSec);
+				$fin = $ja->makeDateArray($baseSec);
 				if ( (($fin['Weekday']>0 && $fin['Weekday']<6) && $fin['Holiday']==0) && ($baseSec<$_from_holiday || $_to_holiday<$baseSec) ) {
 					$workday++;
 				}
@@ -68,7 +68,7 @@ class Delivery {
 		try {
 			$_from_holiday = strtotime(_FROM_HOLIDAY);		// お休み開始日
 			$_to_holiday	= strtotime(_TO_HOLIDAY);		// お休み最終日
-			$hi = new japaneseDate();
+			$ja = new DateJa();
 			$one_day = 86400;
 			$counter=0;										// 作業に要する日数をカウント
 			$workday += $extraday;
@@ -83,7 +83,7 @@ class Delivery {
 
 			// 発送日を算出
 			while($counter<$workday){
-				$fin = $hi->makeDateArray($baseSec);
+				$fin = $ja->makeDateArray($baseSec);
 				if( (($fin['Weekday']>0 && $fin['Weekday']<6) && $fin['Holiday']==0) && ($baseSec<$_from_holiday || $_to_holiday<$baseSec) ){
 					$counter++;
 				}
@@ -94,10 +94,10 @@ class Delivery {
 			$baseSec += ($one_day * (--$transpot));
 
 			// お届け日の日付情報
-			$fin = $hi->makeDateArray($baseSec);
+			$fin = $ja->makeDateArray($baseSec);
 
 			// 曜日を取得
-			$weekday = $hi->viewWeekday($fin['Weekday']);
+			$weekday = $ja->viewWeekday($fin['Weekday']);
 			$fin['Weekname'] = $weekday;
 		} catch (Exception $e) {
 			$fin = array();

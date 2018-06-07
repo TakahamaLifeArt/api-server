@@ -4,9 +4,12 @@
 *	 1.商品（アンケートページへのリンク有り）
 *	 2.資料（保留）
 *	お届予定日の2日後の12:00に自動送信
+*
+*	廃止
 */
 
 require_once dirname(__FILE__).'/conndb.php';
+use package\holiday\DateJa;
 
 class Arrival {
 
@@ -131,8 +134,8 @@ class Arrival {
 	}
 
 
-// 10日前の日付を取得（お届日　schedule4）
-$jd = new japaneseDate();
+// 10日前の日付を取得（お届日）
+$ja = new DateJa();
 $baseSec = time();
 $one_day = 86400;
 $baseSec -= ($one_day*10);
@@ -141,7 +144,7 @@ $baseSec -= ($one_day*10);
 $checkSec = mktime(0, 0, 0, 9, 20, 2012);
 if($baseSec>$checkSec){
 
-	$fin = $jd->makeDateArray($baseSec);
+	$fin = $ja->makeDateArray($baseSec);
 	$arrivalDay = $fin['Year'].'-'.$fin['Month'].'-'.$fin['Day'];
 
 
@@ -155,19 +158,4 @@ if($baseSec>$checkSec){
 	$inst = new Arrival();
 	$inst->send($result, 1);
 }
-
-
-// 3日前の日付を取得（資料発送日　shippedreqdate）
-//$baseSec -= $one_day;
-//$fin = $jd->makeDateArray($baseSec);
-//$shippedDay = $fin['Year'].'-'.$fin['Month'].'-'.$fin['Day'];
-
-// 3日前に資料発送したユーザー情報を取得
-//$result = $conn->getRequestInfo($shippedDay);
-//if(empty($result)) exit;
-
-
-// 資料の到着確認メールを送信
-//$inst->send($result, 2);
-
 ?>

@@ -5,13 +5,14 @@
 */
 
 require_once dirname(__FILE__).'/conndb.php';
+use package\holiday\DateJa;
 
 class Pendingorder {
 
-	private $jd;
+	private $ja;
 	
 	public function __construct(){
-		$this->jd = new japaneseDate();
+		$this->ja = new DateJa();
 	}
 	
 	
@@ -33,14 +34,14 @@ class Pendingorder {
 				$date = explode('-',$orders[$i]['schedule4']);
 			    if($date[0]!="0000"){
 				    $baseSec = mktime(0, 0, 0, $date[1], $date[2], $date[0]);
-				    $fin = $this->jd->makeDateArray($baseSec);							// 受渡日付情報
+				    $fin = $this->ja->makeDateArray($baseSec);							// 受渡日付情報
 				    $deli = $fin;													// 受渡日の曜日を取得
-				    $deli['Weekname'] = mb_convert_encoding($this->jd->viewWeekday($fin['Weekday']),'utf-8','euc-jp');
+				    $deli['Weekname'] = mb_convert_encoding($this->ja->viewWeekday($fin['Weekday']),'utf-8','euc-jp');
 			    }else{
 			    	$deli['Weekname'] = "-";
 			    }
 			    
-				// 件名	
+				// 件名
 				$mail_subject = 'ご注文はまだ確定しておりません';
 				
 				// お客様名
@@ -100,17 +101,17 @@ class Pendingorder {
 
 
 // 休業日の場合は何もしない
-$jd = new japaneseDate();
+$ja = new DateJa();
 $_from_holiday = strtotime(_FROM_HOLIDAY);
 $_to_holiday	= strtotime(_TO_HOLIDAY);
 $baseSec = time();
-$fin = $jd->makeDateArray($baseSec);
+$fin = $ja->makeDateArray($baseSec);
 if( (($fin['Weekday']==0 || $fin['Weekday']==6) || $fin['Holiday']!=0) || ($baseSec>=$_from_holiday && $_to_holiday>=$baseSec) ){
 	exit;
 }
 
-// （注文確定日　schedule2）
-$fin = $jd->makeDateArray($baseSec);
+// （注文確定日）
+$fin = $ja->makeDateArray($baseSec);
 $orderDay = $fin['Year'].'-'.$fin['Month'].'-'.$fin['Day'];
 
 // 注文確定日を指定して注文データを取得
