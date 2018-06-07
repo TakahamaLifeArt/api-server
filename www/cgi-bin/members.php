@@ -107,84 +107,85 @@ class Members Extends MYDB2 {
 			if(empty($args)) return;
 			
 			$conn = self::db_connect();
-		//通常の注文履歴（注文確定のデータのみ）
-		 if (strpos($args, ",no_progress") == false) {
-			$sql = "SELECT orders.id as orderid, schedule2, schedule3, order_amount, amount, payment,
-			 shipped, deposit, progress_id, progressname, estimated, imagecheck,
-			 coalesce(item.item_name,orderitemext.item_name) as item, 
-			 coalesce(item_color, color_name) as color, 
-			 coalesce(orderitemext.size_name, size.size_name) as size, size.id as size_id,
-			 coalesce(item.id, 0) as itemid, item_code, color_code, category_key, category.id as category_id,
-			 orderitemext.price as price,additionalname, orders.additionalfee,
-			 printfee, exchinkfee, packfee, expressfee, discountfee, reductionfee, carriagefee, extracarryfee, designfee, codfee,
-			 basefee, salestax, creditfee, master_id, orderitemext.price, item_cost, printposition_id,
-			 print_group_id, item_group1_id, item_group2_id, catalog.id as master_id
-			 FROM salestax, ((((((((((((orders left join customer on orders.customer_id=customer.id)
-			 left join estimatedetails on orders.id=estimatedetails.orders_id)
-			 left join progressstatus on orders.id=progressstatus.orders_id)
-			 left join acceptstatus on orders.id=acceptstatus.orders_id)
-			 left join acceptprog on acceptstatus.progress_id=acceptprog.aproid)
-
-			 left join orderitem on orders.id=orderitem.orders_id)
-			 left join orderitemext on orderitem.id=orderitemext.orderitem_id)
-			 left join size on size_id=size.id)
-			 left join catalog on master_id=catalog.id)
-			 left join item on catalog.item_id=item.id)
-			 left join itemcolor on catalog.color_id=itemcolor.id)
-			 left join itemprice on item.id=itemprice.item_id)
-			 
-			 left join category on catalog.category_id=category.id
-	 		 WHERE created>'2011-06-05' and progress_id=4 and ordertype='general'
-			 and (itemprice.size_from=size.id || size.id is null)
-			 and ((itemapply<=schedule2 and itemdate>schedule2) || itemapply is null)
-			 and ((itempriceapply<=schedule2 and itempricedate>schedule2) || itempriceapply is null)
-			 and ((catalogapply<=schedule2 and catalogdate>schedule2) || catalogapply is null)
-			 and taxapply=(select max(taxapply) from salestax where taxapply<=schedule3)
-			 and customer.id=?";
-			if (!empty($orderId)) {
-				$sql .= " and orders.id=?";
-			}
-			if (!empty($shipped)) {
-				$sql .= " and shipped=?";
-			}
-			 $sql .= " order by orders.id";
-		 } else {
-		//イメージ画像表示用の注文履歴（注文確定のデータ以外でも検索）
 			
-			$sql = "SELECT orders.id as orderid, schedule2, schedule3, imagecheck,
-			 coalesce(item.item_name,orderitemext.item_name) as item, 
-			 coalesce(item_color, color_name) as color, 
-			 coalesce(orderitemext.size_name, size.size_name) as size,
-			 coalesce(item.id, 0) as itemid, item_code, color_code, category_key,
-			 orderitemext.price as price,additionalname, orders.additionalfee,
-			 printfee, exchinkfee, packfee, expressfee, discountfee, reductionfee, carriagefee, extracarryfee, designfee, codfee,
-			 basefee, salestax, creditfee, master_id, orderitemext.price, item_cost, printposition_id
-			 FROM salestax, (((((((((((orders left join customer on orders.customer_id=customer.id)
-			 left join estimatedetails on orders.id=estimatedetails.orders_id)
-			 left join acceptstatus on orders.id=acceptstatus.orders_id)
-			 left join acceptprog on acceptstatus.progress_id=acceptprog.aproid)
+			//通常の注文履歴（注文確定のデータのみ）
+			if (strpos($args, ",no_progress") == false) {
+				$sql = "SELECT orders.id as orderid, schedule2, schedule3, order_amount, amount, payment,
+				 shipped, deposit, progress_id, progressname, estimated, imagecheck,
+				 coalesce(item.item_name,orderitemext.item_name) as item, 
+				 coalesce(item_color, color_name) as color, 
+				 coalesce(orderitemext.size_name, size.size_name) as size, size.id as size_id,
+				 coalesce(item.id, 0) as itemid, item_code, color_code, category_key, category.id as category_id,
+				 orderitemext.price as price,additionalname, orders.additionalfee,
+				 printfee, exchinkfee, packfee, expressfee, discountfee, reductionfee, carriagefee, extracarryfee, designfee, codfee,
+				 basefee, salestax, creditfee, master_id, orderitemext.price, item_cost, printposition_id,
+				 print_group_id, item_group1_id, item_group2_id, catalog.id as master_id
+				 FROM salestax, ((((((((((((orders left join customer on orders.customer_id=customer.id)
+				 left join estimatedetails on orders.id=estimatedetails.orders_id)
+				 left join progressstatus on orders.id=progressstatus.orders_id)
+				 left join acceptstatus on orders.id=acceptstatus.orders_id)
+				 left join acceptprog on acceptstatus.progress_id=acceptprog.aproid)
 
-			 left join orderitem on orders.id=orderitem.orders_id)
-			 left join orderitemext on orderitem.id=orderitemext.orderitem_id)
-			 left join size on size_id=size.id)
-			 left join catalog on master_id=catalog.id)
-			 left join item on catalog.item_id=item.id)
-			 left join itemcolor on catalog.color_id=itemcolor.id)
-			 left join itemprice on item.id=itemprice.item_id)
-			 
-			 left join category on catalog.category_id=category.id
-	 		 WHERE created>'2011-06-05' and ordertype='general'
-			 and (itemprice.size_from=size.id || size.id is null)
-			 and customer.id=?";
-			if (!empty($orderId)) {
-				$sql .= " and orders.id=?";
+				 left join orderitem on orders.id=orderitem.orders_id)
+				 left join orderitemext on orderitem.id=orderitemext.orderitem_id)
+				 left join size on size_id=size.id)
+				 left join catalog on master_id=catalog.id)
+				 left join item on catalog.item_id=item.id)
+				 left join itemcolor on catalog.color_id=itemcolor.id)
+				 left join itemprice on item.id=itemprice.item_id)
+
+				 left join category on catalog.category_id=category.id
+				 WHERE created>'2011-06-05' and progress_id=4 and ordertype='general'
+				 and (itemprice.size_from=size.id || size.id is null)
+				 and ((itemapply<=schedule2 and itemdate>schedule2) || itemapply is null)
+				 and ((itempriceapply<=schedule2 and itempricedate>schedule2) || itempriceapply is null)
+				 and ((catalogapply<=schedule2 and catalogdate>schedule2) || catalogapply is null)
+				 and taxapply=(select max(taxapply) from salestax where taxapply<=schedule3)
+				 and customer.id=?";
+				if (!empty($orderId)) {
+					$sql .= " and orders.id=?";
+				}
+				if (!empty($shipped)) {
+					$sql .= " and shipped=?";
+				}
+				 $sql .= " order by orders.id";
+			} else {
+				
+			//イメージ画像表示用の注文履歴（注文確定のデータ以外でも検索）
+				$sql = "SELECT orders.id as orderid, schedule2, schedule3, imagecheck,
+				 coalesce(item.item_name,orderitemext.item_name) as item, 
+				 coalesce(item_color, color_name) as color, 
+				 coalesce(orderitemext.size_name, size.size_name) as size,
+				 coalesce(item.id, 0) as itemid, item_code, color_code, category_key,
+				 orderitemext.price as price,additionalname, orders.additionalfee,
+				 printfee, exchinkfee, packfee, expressfee, discountfee, reductionfee, carriagefee, extracarryfee, designfee, codfee,
+				 basefee, salestax, creditfee, master_id, orderitemext.price, item_cost, printposition_id
+				 FROM salestax, (((((((((((orders left join customer on orders.customer_id=customer.id)
+				 left join estimatedetails on orders.id=estimatedetails.orders_id)
+				 left join acceptstatus on orders.id=acceptstatus.orders_id)
+				 left join acceptprog on acceptstatus.progress_id=acceptprog.aproid)
+
+				 left join orderitem on orders.id=orderitem.orders_id)
+				 left join orderitemext on orderitem.id=orderitemext.orderitem_id)
+				 left join size on size_id=size.id)
+				 left join catalog on master_id=catalog.id)
+				 left join item on catalog.item_id=item.id)
+				 left join itemcolor on catalog.color_id=itemcolor.id)
+				 left join itemprice on item.id=itemprice.item_id)
+
+				 left join category on catalog.category_id=category.id
+				 WHERE created>'2011-06-05' and ordertype='general'
+				 and (itemprice.size_from=size.id || size.id is null)
+				 and customer.id=?";
+				if (!empty($orderId)) {
+					$sql .= " and orders.id=?";
+				}
+				if (!empty($shipped)) {
+					$sql .= " and shipped=?";
+				}
+				 $sql .= " order by orders.id";
+				$args = str_replace(",no_progress","",$args);
 			}
-			if (!empty($shipped)) {
-				$sql .= " and shipped=?";
-			}
-			 $sql .= " order by orders.id";
-			$args = str_replace(",no_progress","",$args);
-		 }
 			
 			$stmt = $conn->prepare($sql);
 			if (!empty($orderId)) {
