@@ -274,13 +274,22 @@ try {
 					}
 				}
 				break;
-			case 'holiday':
+			case 'holiday':	// pending
 				if ($method==='GET') {
 				/**
 				 * /holiday/timestamp(sec)
 				 */
 					$deli = new Delivery();
 					$res = $deli->makeDateArray($m[0]);
+				}
+				break;
+			case 'calendar':
+				if ($method==='GET') {
+				/**
+				 * /calendar/year/month
+				 */
+					$deli = new Delivery();
+					$res = $deli->getCalendar((int)$m[0], (int)$m[1]);
 				}
 				break;
 			default:

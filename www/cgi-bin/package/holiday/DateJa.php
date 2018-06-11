@@ -681,7 +681,7 @@ class DateJa
 	 */
 	public function getCalendar(int $year, int $month): array
 	{
-		$lim = date("t", mktime(0, 0, 0, $month, 1, $year));
+		$lim = (int)date("t", mktime(0, 0, 0, $month, 1, $year));
 		return $this->getSpanCalendar($year, $month, 1, $lim);
 	}
 	
