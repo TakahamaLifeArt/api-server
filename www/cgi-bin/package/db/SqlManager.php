@@ -54,13 +54,11 @@ class SqlManager {
 			$r = array();
 			
 			if ($result === FALSE) {
-//				$r[] = $this->_cn->errno.": ".$this->_conn->error;
 				throw new Exception();	// Error
 			} else if($result === TRUE) {
 				$r[] = $this->_cn->affected_rows;	// SELECT文以外
 			} else {
 				// select文
-//				$this->count = $result->num_rows;
 				while ($rec = $result->fetch_array(MYSQLI_BOTH)) {
 					$r[] = $rec;
 				}
@@ -89,10 +87,19 @@ class SqlManager {
 			}
 			call_user_func_array(array($stmt, 'bind_param'), $stmtParams);
 			if (!$stmt->execute()) throw new Exception();
-			$rows = $this->_cn->affected_rows;
+			
+			// INSERT、UPDATE あるいは DELETE クエリによって変更された行数
+			$rows = $stmt->affected_rows;
 			if ($rows > 0) {
-				$r = array($rows);
+				// insertで自動生成されたIDまたはupdateで更新されたID
+				$auto_increment_id = $this->_cn->insert_id;
+				if ($auto_increment_id === 0) {	// IDがAUTO_INCREMENT属性ではない場合は０
+					$r = array($rows);
+				} else {
+					$r = array($auto_increment_id);
+				}
 			} else {
+				// SELECT クエリの場合の結果セットを取得
 				$stmt->store_result();
 				$r = $this->fetchAll($stmt);
 			}
@@ -115,7 +122,7 @@ class SqlManager {
 			$hits = array();
 			$params = array();
 			$meta = $stmt->result_metadata();
-			if (!is_object($meta)) throw new Exception();
+			if (!is_object($meta)) throw new Exception();	// SELECT クエリではない場合
 			while ($field = $meta->fetch_field()) {
 				$params[] =& $row[$field->name];
 			}
@@ -132,5 +139,26 @@ class SqlManager {
 		}
 		return $hits;
 	}
+	
+	/**
+	 * トランザクション
+	 * @param {string} mode {@code begin|commit|rollback}
+	 */
+	public function transaction(string $mode)
+	{
+		switch ($mode)
+		{
+			case 'begin':
+				$this->_cn->begin_transaction();
+				break;
+			case 'commit':
+				$this->_cn->commit();
+				break;
+			case 'rollback':
+				$this->_cn->rollback();
+				break;
+		}
+	}
+
 }
 ?>
