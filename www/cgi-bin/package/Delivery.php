@@ -91,7 +91,7 @@ class Delivery {
 			}
 
 			// 配送日数（通常は作業日数に配送日数の１日も入っているため）
-			$baseSec += ($one_day * (--$transpot));
+			$baseSec += ($one_day * (--$transport));
 
 			// お届け日の日付情報
 			$fin = $ja->makeDateArray($baseSec);
