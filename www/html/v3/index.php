@@ -259,6 +259,7 @@ try {
 				}
 				break;
 			case 'delivery':
+			case 'deliveries':
 				if ($method==='GET') {
 				/**
 				 * /delivery/納期のtimestamp(sec)
@@ -274,7 +275,7 @@ try {
 					}
 				}
 				break;
-			case 'holiday':	// pending
+			case 'holidays':	// pending
 				if ($method==='GET') {
 				/**
 				 * /holiday/timestamp(sec)
@@ -283,7 +284,7 @@ try {
 					$res = $deli->makeDateArray($m[0]);
 				}
 				break;
-			case 'calendar':
+			case 'calendars':
 				if ($method==='GET') {
 				/**
 				 * /calendar/year/month
