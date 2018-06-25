@@ -527,7 +527,7 @@ class Product {
 		} else {
 			$res = str_replace("/", "-", $args);
 			$d = explode('-', $res);
-			if (checkdate($d[1], $d[2], $d[0])===false) {
+			if (checkdate((int)$d[1], (int)$d[2], (int)$d[0])===false) {
 				$res = date('Y-m-d');
 			}
 		}
