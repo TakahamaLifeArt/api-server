@@ -18,23 +18,27 @@ class SqlManager {
 	/**
 	 * param {string} db データベース名
 	 */
-	public function __construct($db) {
+	public function __construct($db)
+	{
 		$this->_db = $db;
 		$this->dbConnect();
 	}
 	
-	public function __destruct() {
+	public function __destruct()
+	{
 		$this->_cn->close();
 	}
 	
-	public function close() {
+	public function close()
+	{
 		$this->_cn->close();
 	}
 	
 	/**
 	 * SQLの接続
 	 */
-	protected function dbConnect() {
+	protected function dbConnect()
+	{
 		$conn = new mysqli(_DB_HOST, _DB_USER, _DB_PASS, $this->_db);
 		if (mysqli_connect_error()) {
 			die('DB Connect Error: '.mysqli_connect_error());
@@ -48,7 +52,8 @@ class SqlManager {
 	 * @param {string} query
 	 * @return {array} selectクエリの結果セット、またはupdate, insert, deleteクエリで適用された行数
 	 */
-	public function execQuery(string $query): array {
+	public function execQuery(string $query): array
+	{
 		try {
 			$result = $this->_cn->query($query);
 			$r = array();
@@ -71,15 +76,35 @@ class SqlManager {
 	}
 	
 	/**
-	 * プリペアードステートメント
+	 * SQLステートメント生成
+	 * @param {string} query
+	 * @return {object|bool} ステートメントオブジェクトを返す。 エラー時には FALSE を返す
+	 */
+	public function prepareStatement(string $query)
+	{
+		try {
+			if (($stmt = $this->_cn->prepare($query))===false) throw new Exception();
+		} catch (Exception $e) {
+			return false;
+		}
+		return $stmt;
+	}
+	
+	/**
+	 * プリペアードステートメントの実行
 	 * @param {string} query
 	 * @param {string} marker
 	 * @param {array} param
+	 * @param {object} stmt 繰り返し実行する場合のプリペアドステートメントオブジェクト
 	 * @return {array} selectクエリの結果セット、またはupdate, insert, deleteクエリで適用された行数
 	 */
-	public function prepared(string $query, string $marker, array $param): array {
+	public function prepared(string $query, string $marker, array $param, $stmt = null): array
+	{
 		try {
-			if (($stmt = $this->_cn->prepare($query))===false) throw new Exception();
+			if (is_null($stmt)) {
+				if (($stmt = $this->_cn->prepare($query))===false) throw new Exception();
+				$isCreatedPrepare = true;
+			}
 			$stmtParams = array();
 			array_unshift($param, $marker);
 			foreach ($param as $key => $value) {
@@ -87,7 +112,7 @@ class SqlManager {
 			}
 			call_user_func_array(array($stmt, 'bind_param'), $stmtParams);
 			if (!$stmt->execute()) throw new Exception();
-			
+
 			// INSERT、UPDATE あるいは DELETE クエリによって変更された行数
 			$rows = $stmt->affected_rows;
 			if ($rows > 0) {
@@ -103,7 +128,7 @@ class SqlManager {
 				$stmt->store_result();
 				$r = $this->fetchAll($stmt);
 			}
-			$stmt->close();
+			if ($isCreatedPrepare) $stmt->close();
 			if (empty($r)) throw new Exception();
 		} catch (Exception $e) {
 			$r = array();
@@ -113,11 +138,12 @@ class SqlManager {
 	
 	/**
 	 * プリペアドステートメントから結果を取得し、バインド変数に格納する
-	 * @param stmt 実行するプリペアドステートメントオブジェクト
+	 * @param {object} stmt 実行するプリペアドステートメントオブジェクト
 	 * @return {array} [カラム名:値, ...][]
 	 * @throw 結果セットがない場合、空配列を返す
 	 */
-	protected function fetchAll( &$stmt): array {
+	protected function fetchAll( &$stmt): array
+	{
 		try {
 			$hits = array();
 			$params = array();
