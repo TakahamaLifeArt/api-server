@@ -413,15 +413,48 @@ class Calc extends Master {
 	 *		@option		淡色:0, 濃色:1
 	 *		@amount		数量
 	 *		@size		プリントサイズ（0:大、1:中、2:小）
-	 *		@itemid		アイテムIDをキーにした当該アイテムの枚数の配列
+	 *		@itemid		アイテムIDをキーにしたカラー名毎の枚数の配列
 	 *		@return		{'tot':プリント代合計, 'press':プレス代計, 'extra':{アイテムID:割増金額}}
 	 */
 	public function calcInkjetFee($option, $amount, $size, $itemid){
 		try{
 			if (empty($itemid) || !is_array($itemid)) throw new Exception();
 
+			// 淡色のアイテムカラー名を取得
+			$paleColor = array();
+			if ($result = $this->conn->query('select color_name from itemcolor where inkjet_option=1')) {
+				while ($row = $result->fetch_assoc()) {
+					$paleColor[$row['color_name']] = true;
+				}
+				$result->close();
+			}
+			
+			// 枚数を集計
+			$numOfOption = array(0,0);		// [淡色の枚数, 濃色の枚数]
+			foreach ($itemid as $id=>$ary) {
+				$item[$id] = 0;
+				if (is_array($ary)) {
+					foreach ($ary as $colorName=>$num) {
+
+						// アイテムID毎に枚数を合算
+						$item[$id] += $num;
+
+						// 濃淡色で枚数を分ける
+						if (isset($paleColor[$colorName])) {
+							$numOfOption[0] += $num;
+						} else {
+							$numOfOption[1] += $num;
+						}
+					}
+				} else {
+					$num = intval($ary);
+					$item[$id] += $num;
+					$numOfOption[$option] += $num;
+				}
+			}
+			
 			// 割増金額を取得
-			$r1 = $this->getExtraCharge($itemid);
+			$r1 = $this->getExtraCharge($item);
 			if (empty($r1)) throw new Exception();
 
 			// 割増金額をアイテム毎に算出
@@ -430,7 +463,7 @@ class Calc extends Master {
 			$vol = 0;
 			$len = count($r1);
 			for ($i=0; $i<$len; $i++) {
-				$amountOfItem = $itemid[ $r1[$i]['item_id'] ];
+				$amountOfItem = $item[ $r1[$i]['item_id'] ];
 				$vol += $amountOfItem;
 				if (empty($r1[$i]['price'])) continue;
 				$rs['extra'][$r1[$i]['item_id']] = $r1[$i]['price'] * $amountOfItem;
@@ -440,22 +473,24 @@ class Calc extends Master {
 			if ($amount==0) $amount = $vol;
 
 			// プリント代計算の単価を取得
+			$rs['press'] = 0;
 			$plateName = array( 'inkjet-pale', 'inkjet-deep' );
-			$mode = $plateName[$option];
 			$sql = 'select print_cost.price as fee from print_method
 				 inner join print_cost on print_method.id=print_cost.print_method_id
 				 where mode=? and operand_index=? and num_over<=? and (num_less>=? or num_less=0) and 
 				 print_method_apply<=? and print_method_stop>? and print_cost_apply<=? and print_cost_stop>?';
-//			$conn = parent::db_connect();
 			$stmt = $this->conn->prepare($sql);
-			$stmt->bind_param("siiissss", $mode, $size, $amount, $amount, $this->curdate, $this->curdate, $this->curdate, $this->curdate);
-			$stmt->execute();
-			$stmt->store_result();
-			$r2 = MYDB2::fetchAll($stmt);
-//			if (empty($r2)) throw new Exception();
-
-			// プリント代
-			$rs['press'] = $r2[0]['fee'] * $amount;
+			
+			for ($i=0; $i<2; $i++) {
+				if (empty($numOfOption[$i])) continue;
+				$stmt->bind_param("siiissss", $plateName[$i], $size, $amount, $numOfOption[$i], $this->curdate, $this->curdate, $this->curdate, $this->curdate);
+				$stmt->execute();
+				$stmt->store_result();
+				$r2 = MYDB2::fetchAll($stmt);
+				
+				// プリント代
+				$rs['press'] += $r2[0]['fee'] * $numOfOption[$i];
+			}
 
 			// プリント代合計
 			$rs['tot'] = $rs['press'] + $extraCharge;
@@ -464,7 +499,6 @@ class Calc extends Master {
 		}
 
 		$stmt->close();
-//		$conn->close();
 		return $rs;
 	}
 

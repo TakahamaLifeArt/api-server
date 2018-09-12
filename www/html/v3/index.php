@@ -157,36 +157,49 @@ try {
 				 */
 					if (empty($param['args'])) throw new Exception('400');
 					$a = json_decode($param['args'], true);
+					
+					// インクジェット以外はアイテムID毎に枚数を合算
+					foreach ($a['items'] as $itemId=>$ary) {
+						$item[$itemId] = 0;
+						if (is_array($ary)) {
+							foreach ($ary as $amount) {
+								$item[$itemId] += $amount;
+							}
+						} else {
+							$item[$itemId] += intval($ary);
+						}
+					}
+					
 					switch ($m[0]) {
 						case 'silk':
-							$res = $calc->calcSilkPrintFee($a['amount'], $a['ink'], $a['items'], $a['size'], $a['repeat']['silk']);
+							$res = $calc->calcSilkPrintFee($a['amount'], $a['ink'], $item, $a['size'], $a['repeat']['silk']);
 							break;
 						case 'inkjet':
 							$res = $calc->calcInkjetFee($a['option'], $a['amount'], $a['size'], $a['items']);
 							break;
 						case 'trans':
 						case 'digit':
-							$res = $calc->calcDigitFee($a['amount'], $a['size'], $a['items'], $a['repeat']['digit']);
+							$res = $calc->calcDigitFee($a['amount'], $a['size'], $item, $a['repeat']['digit']);
 							break;
 						case 'cutting':
-							$res = $calc->calcCuttingFee($a['amount'], $a['size'], $a['items']);
+							$res = $calc->calcCuttingFee($a['amount'], $a['size'], $item);
 							break;
 						case 'embroidery':
 						case 'emb':
-							$res = $calc->calcEmbroideryFee($a['option'], $a['amount'], $a['size'], $a['items'], $a['repeat']['emb']);
+							$res = $calc->calcEmbroideryFee($a['option'], $a['amount'], $a['size'], $item, $a['repeat']['emb']);
 							break;
 						case 'recommend':	// おまかせプリント
 							for ($i=0; $i<count($a['printable']); $i++) {
 								switch ($a['printable'][$i]) {
 									case 'silk':
-										$tmp = $calc->calcSilkPrintFee($a['amount'], $a['ink'], $a['items'], $a['size'], $a['repeat']['silk']);
+										$tmp = $calc->calcSilkPrintFee($a['amount'], $a['ink'], $item, $a['size'], $a['repeat']['silk']);
 										break;
 									case 'inkjet':
 										$tmp = $calc->calcInkjetFee($a['option'], $a['amount'], $a['size'], $a['items']);
 										break;
 									case 'trans':
 									case 'digit':
-										$tmp = $calc->calcDigitFee($a['amount'], $a['size'], $a['items'], $a['repeat']['digit']);
+										$tmp = $calc->calcDigitFee($a['amount'], $a['size'], $item, $a['repeat']['digit']);
 										break;
 								}
 
