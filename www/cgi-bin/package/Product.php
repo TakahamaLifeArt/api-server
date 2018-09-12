@@ -151,15 +151,15 @@ class Product {
 			}
 			
 			if ($sort == 'low') {
-				$query .= " order by cost asc".$limit;
+				$query .= " order by cost asc, item.id".$limit;
 			} else if ($sort == 'high') {
-				$query .= " order by cost desc".$limit;
+				$query .= " order by cost desc, item.id".$limit;
 			} else if ($sort == 'heavy') {
-				$query .= " order by oz desc".$limit;
+				$query .= " order by oz desc, item.id".$limit;
 			} else if ($sort == 'light') {
-				$query .= " order by oz asc".$limit;
+				$query .= " order by oz asc, item.id".$limit;
 			} else if (empty($sort) || $sort == 'popular') {
-				$query .= " order by item_row".$limit;
+				$query .= " order by item_row, item.id".$limit;
 			} else {
 				$sortBy = $sort;
 			}
