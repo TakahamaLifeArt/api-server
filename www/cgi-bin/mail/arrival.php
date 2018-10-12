@@ -59,7 +59,7 @@ class Arrival {
 					$number = 'K'.str_pad($orders[$i]['number'], 6, '0', STR_PAD_LEFT);
 					
 					// アンケートページのアドレス
-					$URL = "https://www.takahama428.com/contact/enquete.html?enq=".$orders[$i]['number'];
+					$URL = "https://www.takahama428.com/contact/enquete.php?enq=".$orders[$i]['number'];
 					
 					// 本文
 					$mail_contents = $customer_name;
