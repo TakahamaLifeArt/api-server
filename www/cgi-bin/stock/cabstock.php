@@ -62,7 +62,7 @@ class CabStock Extends MYDB2 {
 	/*
 	*	キャブ商品の在庫情報を更新
 	*
-	*	@args		{'item_code','color_code','size_name','amount','jancode'}
+	*	@args		{'item_code','item_subcode',color_code','size_name','amount','jancode'}
 	*/
 	public function update_stockdata($args){
 		try{
@@ -123,7 +123,7 @@ class CabStock Extends MYDB2 {
 						$stmt_count->store_result();
 						$rec2 = parent::fetchAll($stmt_count);
 						if(empty($rec2[0]['cnt'])){
-							$stmt_exists_size->bind_param("ii", $args[$i]['size_from'],$rec[$t]['master_id']);
+							$stmt_exists_size->bind_param("ii", $rec[$t]['size_from'],$rec[$t]['master_id']);
 							$stmt_exists_size->execute();
 							$stmt_exists_size->store_result();
 							$rec3 = parent::fetchAll($stmt_exists_size);
