@@ -495,7 +495,7 @@ class Master{
 			
 			$sql = sprintf("select catalog.id as master_id, size.id as id, size_name as name, truncate(%s*margin_pvt*(1+".$tax.")+9,-1) as cost, series, stock_volume as stock, 
 			printarea_1,printarea_2,printarea_3,printarea_4,printarea_5,printarea_6,printarea_7 from 
-			(((catalog inner join itemsize on catalog.size_series=itemsize.series) 
+			(((catalog inner join itemsize on catalog.size_series=itemsize.series and catalog.item_id=itemsize.item_id) 
 			inner join itemprice on itemprice.size_from=itemsize.size_from) 
 			inner join size on itemsize.size_from=size.id) 
 			left join itemstock on itemsize.item_id=stock_item_id and itemsize.size_from=stock_size_id and catalog.id=stock_master_id 

@@ -369,7 +369,7 @@ class Product {
 			$query = "select catalog.id as master_id, size.id as id, size_name as name, series, stock_volume as stock, 
 			(case when color_id=59 then truncate(price_1*margin_pvt*(1+".$tax.")+9,-1) else truncate(price_0*margin_pvt*(1+".$tax.")+9,-1) end) as cost, 
 			printarea_1,printarea_2,printarea_3,printarea_4,printarea_5,printarea_6,printarea_7 from (((catalog 
-			inner join itemsize on catalog.size_series=itemsize.series) 
+			inner join itemsize on catalog.size_series=itemsize.series and catalog.item_id=itemsize.item_id) 
 			inner join itemprice on itemprice.size_from=itemsize.size_from and itemprice.item_id=catalog.item_id) 
 			inner join size on itemsize.size_from=size.id) 
 			left join itemstock on catalog.id=stock_master_id and itemsize.item_id=stock_item_id and itemsize.size_from=stock_size_id 
