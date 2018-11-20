@@ -12,15 +12,29 @@ require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/Delivery.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/Product.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/tag/CategoryTag.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/tag/ItemTag.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Category.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Maker.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Measure.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/PrintType.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Size.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Tag.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/TagType.php';
 use package\User;
 use package\Delivery;
 use package\Product;
 use package\tag\CategoryTag;
 use package\tag\ItemTag;
+use package\db\Category;
+use package\db\Maker;
+use package\db\Measure;
+use package\db\PrintType;
+use package\db\Size;
+use package\db\Tag;
+use package\db\TagType;
 try {
 
 	$method = $_SERVER['REQUEST_METHOD'];
-	if ('GET' === $method || 'PUT' === $method || 'POST' === $method) {
+	if ('GET' === $method || 'PUT' === $method || 'POST' === $method || 'DELETE' === $method) {
 		$headers = getallheaders();
 		if (isset($headers[_HTTP_HEADER_KEY]) || isset($headers['X-Tla-Access-Token'])) {
 			if (_ACCESS_TOKEN !== $headers[_HTTP_HEADER_KEY] && _ACCESS_TOKEN !== $headers['X-Tla-Access-Token']) {
@@ -55,6 +69,32 @@ try {
 		
 		$pro = new Product($db);
 		switch ($param['r']) {
+			case 'masters':
+				if (empty($m[0])) {
+					throw new Exception('400');
+				}
+				
+				// Class名を指定
+				$className = 'package\db\\' . $m[0];
+				if (class_exists($className) === false) {
+					throw new Exception('404');
+				}
+				
+				$master = new $className($db);
+				
+				if ($method==='GET') {
+					$args = $param['args'] ?? [];
+					$res = $master->update(...$args);
+				} else if ($method==='DELETE') {
+					if (empty($m[1])) {
+						throw new Exception('400');
+					}
+					$res = $master->delete($m[1]);
+				} else {
+					$args = $_POST['args'] ?? [];
+					$res = $master->insert(...$args);
+				}
+				break;
 			case 'categories':
 				if ($method==='GET') {
 				/**
