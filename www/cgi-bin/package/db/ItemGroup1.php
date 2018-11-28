@@ -1,6 +1,6 @@
 <?php
 /**
- * サイズクラス for API3
+ * 枚数レンジ区分クラス for API3
  * charset utf-8
  *--------------------
  * log
@@ -20,7 +20,7 @@ require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/SqlManager.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Master.php';
 use \Exception;
 use package\db\SqlManager;
-class Size implements Master {
+class ItemGroup1 implements Master {
 	
 	private $_sql;		// データベースサーバーへの接続を表すオブジェクト
 	private $_curDate;	// 抽出条件に使用する日付(0000-00-00)。NULL(default)は今日
@@ -50,8 +50,8 @@ class Size implements Master {
 	{
 		try {
 			if (count($args)<2) throw new Exception();
-			$sql = "update size set size_name=?, size_row=? where id=?";
-			$ary = $this->_sql->prepared($sql, "sii", array($args[0], $args[1], $args[2]));
+			$sql = "update item_group1 set name=? where id=?";
+			$ary = $this->_sql->prepared($sql, "si", array($args[0], $args[1]));
 			$res = empty($ary)? false: true;
 		} catch (Exception $e) {
 			$res = false;
@@ -69,9 +69,10 @@ class Size implements Master {
 		try {
 			$res = true;
 			if (empty($args)) throw new Exception();
-			$sql = "insert into size (size_name, size_row) values (?, ?)";
+			$now = date('Y-m-d');
+			$sql = "insert into item_group1 (name, group1_apply) values (?, ?)";
 			for ($i=0, $len=count($args); $i<$len; $i++) {
-				$this->_sql->prepared($sql, "si", array($args[$i][0], $args[$i][1]));
+				$this->_sql->prepared($sql, "ss", array($args[$i][0], $now));
 			}
 		} catch (Exception $e) {
 			$res = false;
@@ -89,7 +90,7 @@ class Size implements Master {
 		try {
 			$res = true;
 			if (empty($key)) throw new Exception();
-			$sql = "delete from size where id=? limit 1";
+			$sql = "delete from item_group1 where id=? limit 1";
 			$this->_sql->prepared($sql, "i", array($key));
 		} catch (Exception $e) {
 			$res = false;

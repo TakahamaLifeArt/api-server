@@ -41,12 +41,6 @@ class Maker implements Master {
 	}
 	
 	
-	public function test()
-	{
-		echo $this->_curDate;
-	}
-	
-	
 	/**
 	 * 更新
 	 * @param {array} args 更新データの可変長引数リスト

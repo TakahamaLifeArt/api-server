@@ -1,6 +1,6 @@
 <?php
 /**
- * サイズクラス for API3
+ * 絵型クラス for API3
  * charset utf-8
  *--------------------
  * log
@@ -20,7 +20,7 @@ require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/SqlManager.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Master.php';
 use \Exception;
 use package\db\SqlManager;
-class Size implements Master {
+class Printposition implements Master {
 	
 	private $_sql;		// データベースサーバーへの接続を表すオブジェクト
 	private $_curDate;	// 抽出条件に使用する日付(0000-00-00)。NULL(default)は今日
@@ -50,8 +50,8 @@ class Size implements Master {
 	{
 		try {
 			if (count($args)<2) throw new Exception();
-			$sql = "update size set size_name=?, size_row=? where id=?";
-			$ary = $this->_sql->prepared($sql, "sii", array($args[0], $args[1], $args[2]));
+			$sql = "update printposition set category_type=?, item_type=?, position_type=?, pos_pattern=?, frontface=?, backface=?, sideface=? where id=?";
+			$ary = $this->_sql->prepared($sql, "iiiiiiii", array($args[0], $args[1], $args[2], $args[3], $args[4], $args[5], $args[6], $args[7]));
 			$res = empty($ary)? false: true;
 		} catch (Exception $e) {
 			$res = false;
@@ -69,9 +69,9 @@ class Size implements Master {
 		try {
 			$res = true;
 			if (empty($args)) throw new Exception();
-			$sql = "insert into size (size_name, size_row) values (?, ?)";
+			$sql = "insert into printposition (category_type, item_type, position_type, pos_pattern, frontface, backface, sideface) values (?, ?, ?, ?, ?, ?, ?)";
 			for ($i=0, $len=count($args); $i<$len; $i++) {
-				$this->_sql->prepared($sql, "si", array($args[$i][0], $args[$i][1]));
+				$this->_sql->prepared($sql, "iiiiiii", array($args[$i][0], $args[$i][1], $args[$i][2], $args[$i][3], $args[$i][4], $args[$i][5], $args[$i][6]));
 			}
 		} catch (Exception $e) {
 			$res = false;
@@ -89,7 +89,7 @@ class Size implements Master {
 		try {
 			$res = true;
 			if (empty($key)) throw new Exception();
-			$sql = "delete from size where id=? limit 1";
+			$sql = "delete from printposition where id=? limit 1";
 			$this->_sql->prepared($sql, "i", array($key));
 		} catch (Exception $e) {
 			$res = false;
