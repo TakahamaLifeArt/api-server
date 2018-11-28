@@ -66,12 +66,12 @@ if ( $decoder->isMultipart() ) {
 						$sizename = mb_convert_encoding($sizename, 'utf-8', 'sjis');
 						// サイズの呼称を統一する
 					    switch($sizename){
-					    	case 'フリー':		
+					    	case 'フリー':
 							case 'F':			$sizename = 'Free';
 					    						break;
 					    	case 'LL':			$sizename = 'XL';
 					    						break;
-					    	case 'XXL':			$sizename = '3L';
+							case '2XL':			$sizename = '3L';
 					    						break;
 					    	case 'XXXL':		$sizename = '4L';
 					    						break;
