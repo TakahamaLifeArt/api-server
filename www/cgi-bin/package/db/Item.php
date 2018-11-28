@@ -56,20 +56,25 @@ class Item implements Master {
 			$res = true;
 			if (empty($args)) throw new Exception();
 			
-			$sql = "select item.id as itemId, printposition_id from item inner join catalog on item.id=item_id";
+			$apply = $args[7] ?: $this->_curDate;
+			
+			$sql = "select item.id as itemId, itemdate from item inner join catalog on item.id=item_id";
 			$sql .= " inner join category on category_id=category.id";
 			$sql .= " where item_code=? and category_key=? and itemapply<=? and itemdate>? group by item.id";
-			$rec = $this->_sql->prepared($sql, "ssss", array($args[1], $args[0], $args[7], $args[7]));
+			$rec = $this->_sql->prepared($sql, "ssss", array($args[2], $args[0], $apply, $apply));
 			if (empty($rec)) throw new Exception();
+			
+			$itemId = $rec[0]['itemId'];
+			$itemDate = $args[6] ?: $rec[0]['itemdate'];
 			
 			// item
 			$sql = "update item set item_name=?, item_code=?, maker_id=?, lineup=?, item_row=?, itemdate=?, ";
 			$sql .= "opp=?, oz=?, show_site=?, printposition_id=?, print_group_id=?, item_group1_id=?, item_group2_id=? where id=?";
-			$ary = $this->_sql->prepared($sql, "ssiiisi", 
+			$debug = $this->_sql->prepared($sql, "ssiiisissiiiii", 
 										 array(
-											 $args[1], $args[2], $args[3], $args[4], $args[5], $args[6], 
+											 $args[1], $args[2], $args[3], $args[4], $args[5], $itemDate, 
 											 $args[8], $args[9], $args[10], $args[11], $args[12], $args[13], $args[14], 
-											 $rec[0]['itemId'],
+											 $itemId,
 										 )
 										);
 
@@ -77,75 +82,75 @@ class Item implements Master {
 			// itemsize
 			// $args[15]
 			$addSeries = $args[15];
+			$sizeSeries = [];
 			
 			// 既存のitemsizeデータを取得
 			$sql = "select * from itemsize ";
-			$sql .= "where item_id=? itemsizeapply<=? and itemsizedate>? order by series, size_from";
-			$tmp = $this->_sql->prepared($sql, "iss", array($rec[0]['itemId'], $args[7], $args[7]));
-			if (empty($tmp)) throw new Exception();
-
-			// サイズシリーズをキーにしたハッシュを生成
-			for ($i=0, $len=count($tmp); $i<$len; $i++) {
-				$itemSize[ $tmp[$i]['series'] ][] = $tmp[$i];
-			}
-
-			$idx = -1;
-			foreach ($itemSize as $series => $v) {
-				$idx++;
-				
-				if (isset($args[15][$idx]) === false) {
-					// 既存のサイズシリーズに対応するデータが無い場合、当該シリーズを全て取扱中止
-					$sql = "update itemsize set itemsizedate=? where item_id=? and series=?";
-					$this->_sql->prepared($sql, "sii", array($args[7], $rec[0]['itemId'], $series));
-					continue;
+			$sql .= "where item_id=? and itemsizeapply<=? and itemsizedate>? order by series, size_from";
+			$tmp = $this->_sql->prepared($sql, "iss", array($itemId, $apply, $apply));
+			if (!empty($tmp)) {
+				// サイズシリーズをキーにしたハッシュを生成
+				for ($i=0, $len=count($tmp); $i<$len; $i++) {
+					$itemSize[ $tmp[$i]['series'] ][] = $tmp[$i];
 				}
-				
-				// 更新ずみデータ
-				unset($addSeries[$idx]);
-				
-				// 既存シリーズのサイズIDをキーにしたハッシュを生成
-				$existSize = array_column($v, null, 'size_from');
-//				for ($i=0, $l=count($v); $i<$l; $i++) {
-//					$existSize[ $v[$i]['size_from'] ] = $v[$i];
-//				}
-				
-				for ($n=0, $len=count($args[15][$idx]['size_id']); $n<$len; $n++) {
-					// サイズ毎に処理
-					$sizeId = $args[15][$idx]['size_id'][$n];
-					$stop = $args[15][$idx]['stop'][$n] ? date("Y-m-d", strtotime($args[15][$idx]['stop'][$n]." +1 day")): '3000-01-01';
 
-					if (isset($existSize[$sizeId])) {
-						// 既存サイズあり
+				$idx = -1;
+				foreach ($itemSize as $series => $v) {
+					$idx++;
+					$sizeSeries[] = $series;
+					
+					if (isset($args[15][$idx]) === false) {
+						// 既存のサイズシリーズに対応するデータが無い場合、当該シリーズを全て取扱中止
+						$sql = "update itemsize set itemsizedate=? where item_id=? and series=?";
+						$this->_sql->prepared($sql, "sii", array($apply, $itemId, $series));
+						continue;
+					}
 
-						if ($existSize[$sizeId]['itemsizedate'] == $stop) continue;
+					// 更新ずみデータ
+					unset($addSeries[$idx]);
 
-						// 取扱中止日に変更あり
-						$sql = "update itemsize set itemsizedate=? where id=?";
-						$this->_sql->prepared($sql, "si", array($stop, $existSize[$sizeId]['id']));
-						
-					} else if ($i === 0) {
-						// 既存サイズなし
+					// 既存シリーズのサイズIDをキーにしたハッシュを生成
+					$existSize = array_column($v, null, 'size_from');
 
-						$sql = "insert into itemsize (id, item_id, series, size_from, size_to, itemsizeapply, itemsizedate) ";
-						$sql .= "values(null,?,?,?,?,?,?)";
-						$this->_sql->prepared($sql, "iiiiss", array($rec[0]['itemId'], $series, $sizeId, $sizeId, $args[7], $stop));
+					for ($n=0, $len=count($args[15][$idx]['size_id']); $n<$len; $n++) {
+						// サイズ毎に処理
+						$sizeId = $args[15][$idx]['size_id'][$n];
+						$stop = $args[15][$idx]['stop'][$n] ? date("Y-m-d", strtotime($args[15][$idx]['stop'][$n]." +1 day")): '3000-01-01';
+
+						if (isset($existSize[$sizeId])) {
+							// 既存サイズあり
+
+							if ($existSize[$sizeId]['itemsizedate'] == $stop) continue;
+
+							// 取扱中止日に変更あり
+							$sql = "update itemsize set itemsizedate=? where id=?";
+							$this->_sql->prepared($sql, "si", array($stop, $existSize[$sizeId]['id']));
+
+						} else if ($i === 0) {
+							// 既存サイズなし
+
+							$sql = "insert into itemsize (id, item_id, series, size_from, size_to, itemsizeapply, itemsizedate) ";
+							$sql .= "values(null,?,?,?,?,?,?)";
+							$this->_sql->prepared($sql, "iiiiss", array($itemId, $series, $sizeId, $sizeId, $apply, $stop));
+						}
 					}
 				}
 			}
 			
 			// 追加のシリーズあり
 			if (!empty($addSeries)) {
-				$maxSeries = $this->_sql->execQuery('select max(series) as max_series from itemsize');
-				if (empty($maxSeries)) throw new Exception();
-				$series = $maxSeries[0];
+				$tmp = $this->_sql->execQuery('select max(series) as max_series from itemsize');
+				if (empty($tmp)) throw new Exception();
+				$series = $tmp[0]['max_series'];
 				
 				$sql = "insert into itemsize (id, item_id, series, size_from, size_to, itemsizeapply, itemsizedate) values(null,?,?,?,?,?,?)";
 				foreach ($addSeries as $v) {
 					$series++;
+					$sizeSeries[] = $series;
 					for ($i=0, $len=count($v['size_id']); $i<$len; $i++) {
 						$this->_sql->prepared($sql, "iiiiss", 
 											  array(
-												  $rec[0]['itemId'], $series, $v['size_id'][$i], $v['size_id'][$i], $args[7],
+												  $itemId, $series, $v['size_id'][$i], $v['size_id'][$i], $apply,
 												  $v['stop'][$i] ? date("Y-m-d", strtotime($v['stop'][$i]." +1 day")): '3000-01-01',
 											  )
 											 );
@@ -162,14 +167,13 @@ class Item implements Master {
 			// 既存のitempriceデータ取得
 			$sql = "select * from itemprice ";
 			$sql .= "where item_id=? and itempriceapply<=? and itempricedate>? order by size_from";
-			$tmp = $this->_sql->prepared($sql, "iss", array($rec[0]['itemId'], $args[7], $args[7]));
-			if (empty($tmp)) throw new Exception();
-			
-			// サイズIDをキーにしたハッシュを生成
-			$itemPrice = array_column($tmp, null, 'size_from');
-//			for ($i=0, $len=count($tmp); $i<$len; $i++) {
-//				$itemPrice[ $tmp[$i]['size_from'] ] = $tmp[$i];
-//			}
+			$tmp = $this->_sql->prepared($sql, "iss", array($itemId, $apply, $apply));
+			if (empty($tmp)) {
+				$itemPrice = [];
+			} else {
+				// サイズIDをキーにしたハッシュを生成
+				$itemPrice = array_column($tmp, null, 'size_from');
+			}
 			
 			foreach ($args[16] as $sizeId => $v) {
 				// 単価
@@ -190,12 +194,12 @@ class Item implements Master {
 					if ($itemPrice[$sizeId]['price_0'] != $price_0 || $itemPrice[$sizeId]['price_1'] != $price_1) {
 						// 金額の変更は新規レコードで書き換え
 						$sql = "update itemprice set itempricedate=? where id=?";
-						$this->_sql->prepared($sql, "si", array($args[7], $itemPrice[$sizeId]['id']));
+						$this->_sql->prepared($sql, "si", array($apply, $itemPrice[$sizeId]['id']));
 						
 						$sql = "insert into itemprice (id, item_id, size_from, size_to, price_0, price_1, itempriceapply, itempricedate) ";
 						$sql .= "values(null,?,?,?,?,?,?,?)";
 						$this->_sql->prepared($sql, "iiiiiss", 
-											  array($itemPrice[$sizeId]['item_id'], $sizeId, $sizeId, $price_0, $price_1, $args[7], $stop)
+											  array($itemPrice[$sizeId]['item_id'], $sizeId, $sizeId, $price_0, $price_1, $apply, $stop)
 											 );
 					} else {
 						// 取扱中止日を更新
@@ -207,7 +211,7 @@ class Item implements Master {
 					$sql = "insert into itemprice (id, item_id, size_from, size_to, price_0, price_1, itempriceapply, itempricedate) ";
 					$sql .= "values(null,?,?,?,?,?,?,?)";
 					$this->_sql->prepared($sql, "iiiiiss", 
-										  array($itemPrice[$sizeId]['item_id'], $sizeId, $sizeId, $price_0, $price_1, $args[7], $stop)
+										  array($itemPrice[$sizeId]['item_id'], $sizeId, $sizeId, $price_0, $price_1, $apply, $stop)
 										 );
 				}
 			}
@@ -217,7 +221,7 @@ class Item implements Master {
 			if (!empty($remove)) {
 				foreach ($remove as $sizeId => $v) {
 					$sql = "update itemprice set itempricedate=? where id=?";
-					$this->_sql->prepared($sql, "si", array($args[7], $v['id']));
+					$this->_sql->prepared($sql, "si", array($apply, $v['id']));
 				}
 			}
 
@@ -235,12 +239,15 @@ class Item implements Master {
 
 			// catalog
 			// $args[17][ [カラーコード, カラー名, 当該カラーに対応するパターンのインデックス, 取扱最終日], ... ]
-			$sql = "select * from catalog where item_id=? and categoryapply<=? and categorydate>?";
-			$tmp = $this->_sql->prepared($sql, "iss", array($rec[0]['itemId'], $args[7], $args[7]));
-			if (empty($tmp)) throw new Exception();
-
-			// カラーコードをキーにしたハッシュを生成
-			$catalog = array_column($tmp, null, 'color_code');
+			$sql = "select * from catalog where item_id=? and catalogapply<=? and catalogdate>?";
+			$tmp = $this->_sql->prepared($sql, "iss", array($itemId, $apply, $apply));
+			
+			if (empty($tmp)) {
+				$catalog = [];
+			} else {
+				// カラーコードをキーにしたハッシュを生成
+				$catalog = array_column($tmp, null, 'color_code');
+			}
 			
 			for ($i=0, $len=count($args[17]); $i<$len; $i++) {
 				$v = $args[17][$i];
@@ -252,7 +259,7 @@ class Item implements Master {
 					$stop = date("Y-m-d", strtotime($v['stop']." +1 day"));
 				}
 
-				// 既存のカラー名の有無を検証し、無い場合は新規登録
+				// 既存のアイテムカラー名の有無を検証し、無い場合は新規登録
 				if (isset($colorNames[ $v['name'] ])) {
 					$colorId = $colorNames[ $v['name'] ]['id'];
 				} else {
@@ -264,27 +271,28 @@ class Item implements Master {
 				
 				if (isset($catalog[ $v['code'] ])) {
 					// 既存データあり
-					if ($catalog[ $v['code'] ]['color_id'] != $colorId || $catalog[ $v['code'] ]['size_series'] != $v['series']) {
+					
+					if ($catalog[ $v['code'] ]['color_id'] != $colorId || $catalog[ $v['code'] ]['size_series'] != $sizeSeries[ $v['series'] ]) {
 						// カラー名またはサイズシリーズの変更は新規レコードで書き換え
-						$sql = "update category set categorydate=? where id=?";
-						$this->_sql->prepared($sql, "si", array($args[7], $catalog[ $v['code'] ]['id']));
+						$sql = "update catalog set catalogdate=? where id=?";
+						$this->_sql->prepared($sql, "si", array($apply, $catalog[ $v['code'] ]['id']));
 
-						$sql = "insert into catalog (id, category_id, item_id, color_code, color_id, size_series, catalogapply, categorydate)";
+						$sql = "insert into catalog (id, category_id, item_id, color_code, color_id, size_series, catalogapply, catalogdate)";
 						$sql .= " values(null,?,?,?,?,?,?,?)";
 						$this->_sql->prepared($sql, "iisiiss", 
-											  array($categoryId, $rec[0]['itemId'], $v['code'], $colorId, $v['series'], $args[7], $stop)
+											  array($categoryId, $itemId, $v['code'], $colorId, $sizeSeries[ $v['series'] ], $apply, $stop)
 											 );
 					} else {
 						// 取扱中止日を更新
-						$sql = "update category set categorydate=? where id=?";
+						$sql = "update catalog set catalogdate=? where id=?";
 						$this->_sql->prepared($sql, "si", array($stop, $catalog[ $v['code'] ]['id']));
 					}
 				} else {
 					// 追加カラーあり
-					$sql = "insert into catalog (id, category_id, item_id, color_code, color_id, size_series, catalogapply, categorydate)";
+					$sql = "insert into catalog (id, category_id, item_id, color_code, color_id, size_series, catalogapply, catalogdate)";
 					$sql .= " values(null,?,?,?,?,?,?,?)";
 					$this->_sql->prepared($sql, "iisiiss", 
-										  array($categoryId, $rec[0]['itemId'], $v['code'], $colorId, $v['series'], $args[7], $stop)
+										  array($categoryId, $itemId, $v['code'], $colorId, $sizeSeries[ $v['series'] ], $apply, $stop)
 										 );
 				}
 			}
@@ -295,12 +303,10 @@ class Item implements Master {
 			if (!empty($remove)) {
 				foreach ($remove as $colorCode => $v) {
 					$sql = "update itemprice set itempricedate=? where id=?";
-					$this->_sql->prepared($sql, "si", array($args[7], $v['id']));
+					$this->_sql->prepared($sql, "si", array($apply, $v['id']));
 				}
 			}
 
-
-			$res = empty($ary)? false: true;
 		} catch (Exception $e) {
 			$res = false;
 		}
