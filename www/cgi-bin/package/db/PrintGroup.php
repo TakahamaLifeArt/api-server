@@ -49,9 +49,11 @@ class PrintGroup implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
+			$stop = $args[2]? date("Y-m-d", strtotime($args[2]." +1 day")): '3000-01-01';
 			$sql = "update print_group set name=?, price=?, print_group_stop=? where id=?";
-			$ary = $this->_sql->prepared($sql, "sisi", array($args[0], $args[1], $args[2], $args[3]));
+			$ary = $this->_sql->prepared($sql, "sisi", array($args[0], $args[1], $stop, $args[3]));
 			$res = empty($ary)? false: true;
 		} catch (Exception $e) {
 			$res = false;
@@ -69,10 +71,9 @@ class PrintGroup implements Master {
 		try {
 			$res = true;
 			if (empty($args)) throw new Exception();
-			$now = date('Y-m-d');
 			$sql = "insert into print_group (name, price, print_group_apply) values (?, ?, ?)";
 			for ($i=0, $len=count($args); $i<$len; $i++) {
-				$this->_sql->prepared($sql, "sis", array($args[$i][0], $args[$i][1], $now));
+				$this->_sql->prepared($sql, "sis", array($args[$i]['name'], $args[$i]['price'], $args[$i]['apply']));
 			}
 		} catch (Exception $e) {
 			$res = false;
@@ -89,9 +90,9 @@ class PrintGroup implements Master {
 	{
 		try {
 			$res = true;
-			if (empty($key)) throw new Exception();
-			$sql = "delete from print_group where id=? limit 1";
-			$this->_sql->prepared($sql, "i", array($key));
+//			if (empty($key)) throw new Exception();
+//			$sql = "delete from print_group where id=? limit 1";
+//			$this->_sql->prepared($sql, "i", array($key));
 		} catch (Exception $e) {
 			$res = false;
 		}

@@ -49,7 +49,8 @@ class Maker implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
 			$sql = "update maker set maker_name=? where id=?";
 			$ary = $this->_sql->prepared($sql, "si", array($args[0], $args[1]));
 			$res = empty($ary)? false: true;

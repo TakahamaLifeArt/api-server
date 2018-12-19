@@ -49,7 +49,8 @@ class Tag implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
 			$sql = "update tags set tag_name=?, tag_type=?, tag_order=? where tagid=?";
 			$ary = $this->_sql->prepared($sql, "siii", array($args[0], $args[1], $args[2], $args[3]));
 			$res = empty($ary)? false: true;

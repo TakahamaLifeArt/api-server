@@ -49,7 +49,8 @@ class TagType implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
 			$sql = "update tagtype set tagtype_name=? where tagtypeid=?";
 			$ary = $this->_sql->prepared($sql, "si", array($args[0], $args[1]));
 			$res = empty($ary)? false: true;

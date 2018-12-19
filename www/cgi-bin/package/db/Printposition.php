@@ -49,7 +49,8 @@ class Printposition implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
 			$sql = "update printposition set category_type=?, item_type=?, position_type=?, pos_pattern=?, frontface=?, backface=?, sideface=? where id=?";
 			$ary = $this->_sql->prepared($sql, "iiiiiiii", array($args[0], $args[1], $args[2], $args[3], $args[4], $args[5], $args[6], $args[7]));
 			$res = empty($ary)? false: true;
@@ -71,7 +72,9 @@ class Printposition implements Master {
 			if (empty($args)) throw new Exception();
 			$sql = "insert into printposition (category_type, item_type, position_type, pos_pattern, frontface, backface, sideface) values (?, ?, ?, ?, ?, ?, ?)";
 			for ($i=0, $len=count($args); $i<$len; $i++) {
-				$this->_sql->prepared($sql, "iiiiiii", array($args[$i][0], $args[$i][1], $args[$i][2], $args[$i][3], $args[$i][4], $args[$i][5], $args[$i][6]));
+				$this->_sql->prepared($sql, "iiiiiii", array(
+					$args[$i]['category_type'], $args[$i]['item_type'], $args[$i]['area_type'], $args[$i]['pos_pattern'], 
+					$args[$i]['frontface_id'], $args[$i]['backface_id'], $args[$i]['sideface_id']));
 			}
 		} catch (Exception $e) {
 			$res = false;

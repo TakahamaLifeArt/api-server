@@ -49,7 +49,8 @@ class PrintType implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
 			$sql = "update printtype set printtype_name=?, printtype_key=? where printtype_key=?";
 			$ary = $this->_sql->prepared($sql, "sss", array($args[0], $args[1], $args[2]));
 			$res = empty($ary)? false: true;

@@ -49,7 +49,8 @@ class Website implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
 			$sql = "update website set domainname=?, sitename=? where siteid=?";
 			$ary = $this->_sql->prepared($sql, "ssi", array($args[0], $args[1], $args[2]));
 			$res = empty($ary)? false: true;
@@ -71,7 +72,7 @@ class Website implements Master {
 			if (empty($args)) throw new Exception();
 			$sql = "insert into website (domainname, sitename) values (?, ?)";
 			for ($i=0, $len=count($args); $i<$len; $i++) {
-				$this->_sql->prepared($sql, "ss", array($args[$i][0], $args[$i][1]));
+				$this->_sql->prepared($sql, "ss", array($args[$i]['domain'], $args[$i]['name']));
 			}
 		} catch (Exception $e) {
 			$res = false;

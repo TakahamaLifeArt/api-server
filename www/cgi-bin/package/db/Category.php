@@ -49,7 +49,8 @@ class Category implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
 			$sql = "update category set category_name=?, category_key=? where category_key=?";
 			$ary = $this->_sql->prepared($sql, "sss", array($args[0], $args[1], $args[2]));
 			$res = empty($ary)? false: true;

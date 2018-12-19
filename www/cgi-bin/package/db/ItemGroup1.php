@@ -49,7 +49,8 @@ class ItemGroup1 implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
 			$sql = "update item_group1 set name=? where id=?";
 			$ary = $this->_sql->prepared($sql, "si", array($args[0], $args[1]));
 			$res = empty($ary)? false: true;
@@ -72,7 +73,7 @@ class ItemGroup1 implements Master {
 			$now = date('Y-m-d');
 			$sql = "insert into item_group1 (name, group1_apply) values (?, ?)";
 			for ($i=0, $len=count($args); $i<$len; $i++) {
-				$this->_sql->prepared($sql, "ss", array($args[$i][0], $now));
+				$this->_sql->prepared($sql, "ss", array($args[$i]['name'], $now));
 			}
 		} catch (Exception $e) {
 			$res = false;

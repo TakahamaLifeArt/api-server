@@ -49,7 +49,8 @@ class Size implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
 			$sql = "update size set size_name=?, size_row=? where id=?";
 			$ary = $this->_sql->prepared($sql, "sii", array($args[0], $args[1], $args[2]));
 			$res = empty($ary)? false: true;

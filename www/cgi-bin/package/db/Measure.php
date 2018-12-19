@@ -49,7 +49,8 @@ class Measure implements Master {
 	public function update(...$args): bool
 	{
 		try {
-			if (count($args)<2) throw new Exception();
+			$res = true;
+			if (empty($args)) throw new Exception();
 			$sql = "update measure set measure_name=?, measure_row=? where measureid=?";
 			$ary = $this->_sql->prepared($sql, "sii", array($args[0], $args[1], $args[2]));
 			$res = empty($ary)? false: true;
