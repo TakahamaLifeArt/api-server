@@ -132,7 +132,7 @@ class Arrival {
 			//$reply = 'ERROR: メールの送信が出来ませんでした。';
 		}
 	}
-
+}
 
 // 10日前の日付を取得（お届日）
 $ja = new DateJa();
