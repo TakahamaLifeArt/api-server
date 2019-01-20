@@ -130,17 +130,19 @@ class Cab Extends MYDB2 {
 				// OPP袋の枚数確認
 				if($rec[$i]['package_no']==0){
 					if($rec[$i]['opp']==1){
-						$opp_amount['small'][amount] += $rec[$i]['amount'];
+						$opp_amount['small']['amount'] += $rec[$i]['amount'];
 					}else if($rec[$i]['opp']==2){
-						$opp_amount['big'][amount] += $rec[$i]['amount'];
+						$opp_amount['big']['amount'] += $rec[$i]['amount'];
 					}
 				}
 			}
 			unset($val);
 			
 			// OPP袋の発注データ
-			foreach($opp_amount as $key=>$opp){
-				if($opp['amount']==0) continue;
+			foreach($opp_amount as $size=>$opp){
+				if($opp['amount']==0) {
+					continue;
+				}
 				foreach($details as $key=>&$val){
 					switch($key){
 						case "detail_number":
