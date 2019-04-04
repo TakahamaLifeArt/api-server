@@ -48,7 +48,7 @@ define('_MAGIC_PASS', 'f629e76fcf2154594bde9199893a96e6e7d53e4e');
 // TLA API
 define('_ACCESS_TOKEN', 'cuJ5yaqUqufruSPasePRazasUwrevawU');
 define('_HTTP_HEADER_KEY', 'X-TLA-Access-Token');
-define('_MEMBER_HOSTS', array(_ACCESS_TOKEN=>array('www.takahama428.com', 'test.takahama428.com', 'original-sweat.com', 'test.original-sweat.com', 'and4.jp')));
+define('_MEMBER_HOSTS', array(_ACCESS_TOKEN=>array('www.takahama428.com', 'test.takahama428.com', 'original-sweat.com', 'test.original-sweat.com', 'and4.jp', 'www.alesteq.com')));
 
 // SQL
 define('_DB_USER', 'tlauser');

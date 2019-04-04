@@ -201,6 +201,6 @@ if (empty($data)) {
 }
 
 // 更新結果を送信
-$inst->send($args);
+//$inst->send($args);
 
 ?>

@@ -12,6 +12,8 @@ require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/Delivery.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/Product.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/tag/CategoryTag.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/tag/ItemTag.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Item.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Itemdetail.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Category.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Maker.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Measure.php';
@@ -19,11 +21,19 @@ require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/PrintType.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Size.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Tag.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/TagType.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Printposition.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Printpattern.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/PrintGroup.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/ItemGroup1.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/ItemGroup2.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/db/Website.php';
 use package\User;
 use package\Delivery;
 use package\Product;
 use package\tag\CategoryTag;
 use package\tag\ItemTag;
+use package\db\Item;
+use package\db\Itemdetail;
 use package\db\Category;
 use package\db\Maker;
 use package\db\Measure;
@@ -31,6 +41,13 @@ use package\db\PrintType;
 use package\db\Size;
 use package\db\Tag;
 use package\db\TagType;
+use package\db\Printposition;
+use package\db\Printpattern;
+use package\db\PrintGroup;
+use package\db\ItemGroup1;
+use package\db\ItemGroup2;
+use package\db\Website;
+
 try {
 
 	$method = $_SERVER['REQUEST_METHOD'];
@@ -61,7 +78,9 @@ try {
 
 		$domain = explode('.', $host);
 		$hostName = $domain[0];
-		if ($hostName !== 'test') {
+		if ($host == 'www.alesteq.com') {
+			$db = _DB_NAME_DEV;
+		} else if ($hostName !== 'test') {
 			$db = _DB_NAME;
 		} else {
 			$db = _DB_NAME_DEV;
@@ -84,15 +103,24 @@ try {
 				
 				if ($method==='GET') {
 					$args = $param['args'] ?? [];
-					$res = $master->update(...$args);
+					
+					if (empty($m[1])) {
+						$res = $master->update(...$args);
+					} else {
+						$res = $master->{$m[1]}($args);
+					}
 				} else if ($method==='DELETE') {
 					if (empty($m[1])) {
 						throw new Exception('400');
 					}
 					$res = $master->delete($m[1]);
 				} else {
-					$args = $_POST['args'] ?? [];
-					$res = $master->insert(...$args);
+					$args = $_REQUEST['args'] ?? [];
+					if ($_REQUEST['_method'] == 'update') {
+						$res = $master->update(...$args);
+					} else {
+						$res = $master->insert(...$args);
+					}
 				}
 				break;
 			case 'categories':

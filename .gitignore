@@ -1,0 +1,7 @@
+# ignore
+.DS_Store
+www/html/ctrl/*.sql
+www/html/weblib/img/*
+www/cgi-bin/package/db/*
+www/cgi-bin/package/survey/*
+www/html/makeTable.php

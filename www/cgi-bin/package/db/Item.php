@@ -59,7 +59,8 @@ class Item implements Master {
 			$apply = $args[7] ?: $this->_curDate;
 			$preItemCode = $args[18];
 			
-			$sql = "select item.id as itemId, item_code, printposition_id, print_group_id, item_group1_id, item_group2_id from item ";
+			$sql = "select item.id as itemId, item_code, printposition_id, print_group_id, item_group1_id, item_group2_id, ";
+			$sql .= "itemapply, itemdate from item ";
 			$sql .= "inner join catalog on item.id=item_id inner join category on category_id=category.id ";
 			$sql .= "where item_code=? and category_key=? and itemapply<=? and itemdate>? limit 1;";
 			$rec = $this->_sql->prepared($sql, "ssss", array($preItemCode, $args[0], $apply, $apply));
@@ -76,7 +77,7 @@ class Item implements Master {
 			$itemStop = $args[6]? date("Y-m-d", strtotime($args[6]." +1 day")): '3000-01-01';
 			
 			// item
-			if ($itemdate != $itemStop) {
+			if ($itemDate != $itemStop) {
 				// 取扱中止日を変更する際は、他の更新を無効とする
 				$isModifiedStop = true;
 				$sql = "update item set item_name=?, item_code=?, maker_id=?, lineup=?, item_row=?, itemdate=? where id=?";
@@ -149,7 +150,6 @@ class Item implements Master {
 				
 				// アイテムID変更
 				$itemId = $newItemId;
-				
 			} else {
 				// 通常更新
 				$sql = "update item set item_name=?, item_code=?, maker_id=?, lineup=?, item_row=?, itemdate=?, ";
@@ -439,7 +439,6 @@ class Item implements Master {
 					$this->_sql->prepared($sql, "si", array($apply, $v['id']));
 				}
 			}
-
 		} catch (Exception $e) {
 			$res = false;
 		}
