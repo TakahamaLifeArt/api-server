@@ -247,7 +247,7 @@ class User {
 
 
 	/**
-	 * メールアドレス（addr_spec）チェック
+	 * メールアドレス（RFC-2822 addr_spec）チェック
 	 * @param {string} email チェックするメールアドレス
 	 * @param {bool} supportPeculiarFormat 昔の携帯電話メールアドレスの形式をサポートするかで使う場合はtrue、使わない場合はfalse
 	 * @return {bool} メールアドレスとして妥当な場合に{@code true}を返す

@@ -68,7 +68,15 @@ try {
 			throw new Exception('401');
 		}
 		
-		parse_str($_SERVER['QUERY_STRING'], $param);
+		// 二重にURLデコードされるため
+//		parse_str($_SERVER['QUERY_STRING'], $param);
+
+		$var = explode('&', $_SERVER['QUERY_STRING']);
+		for ($i=0; $i<count($var); $i++) {
+			$q = explode('=', $var[$i]);
+			$param[$q[0]] = $q[1];
+		}
+
 		if (empty($param['r'])) {
 			throw new Exception('418');
 		}
