@@ -68,13 +68,14 @@ try {
 			throw new Exception('401');
 		}
 		
-		// 二重にURLデコードされるため
-//		parse_str($_SERVER['QUERY_STRING'], $param);
+		parse_str($_SERVER['QUERY_STRING'], $param);
 
+		// 二重にURLデコードされているため、上書き
 		$var = explode('&', $_SERVER['QUERY_STRING']);
 		for ($i=0; $i<count($var); $i++) {
 			$q = explode('=', $var[$i]);
-			$param[$q[0]] = $q[1];
+			if ($q[0] !== 'm') continue;
+			$param[$q[0]] = substr($var[$i], strpos($var[$i], '=')+1);
 		}
 
 		if (empty($param['r'])) {
