@@ -74,12 +74,14 @@ class Delivery {
 			$workday += $extraday;
 
 			if(empty($baseSec)){
-				$time_stamp = time()+39600;							// 13:00からは翌日扱いのため11時間の秒数分を足す
-				$year  = date("Y", $time_stamp);
-				$month = date("m", $time_stamp);
-				$day   = date("d", $time_stamp);
-				$baseSec = mktime(0, 0, 0, (int)$month, (int)$day, (int)$year);	// 注文確定日の00:00のtimestampを取得
+				$time_stamp = time()+39600;					// 13:00からは翌日扱いのため11時間の秒数分を足す
 			}
+			
+			// 注文確定日の00:00のtimestampを取得
+			$year  = date("Y", $time_stamp);
+			$month = date("m", $time_stamp);
+			$day   = date("d", $time_stamp);
+			$baseSec = mktime(0, 0, 0, (int)$month, (int)$day, (int)$year);
 
 			// 発送日を算出
 			while($counter<$workday){
