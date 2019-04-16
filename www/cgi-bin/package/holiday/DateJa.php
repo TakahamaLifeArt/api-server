@@ -40,6 +40,8 @@ define("JD_CULTURE_DAY", 19);
 define("JD_LABOR_THANKSGIVING_DAY", 20);
 define("JD_REGNAL_DAY", 21);
 define("JD_MOUNTAIN_DAY", 22);
+define("JD_EMPEROR_ENTHRONEMENT_DAY", 23);
+define("JD_NATIONAL_HOLIDAYS", 24);
 
 /**
  * 特定月定数
@@ -88,6 +90,8 @@ class DateJa
 		20 => "勤労感謝の日",
 		21 => "即位礼正殿の儀",
 		22 => "山の日",
+		23 => "天皇即位の日",
+		24 => "国民の祝日",
 	);
 	private $_weekday_name = array("日", "月", "火", "水", "木", "金", "土");
 	private $_month_name = array("", "睦月", "如月", "弥生", "卯月", "皐月", "水無月", "文月", "葉月", "長月", "神無月", "霜月", "師走");
@@ -136,6 +140,61 @@ class DateJa
 			case 12:
 			return $this->getDecemberHoliday($this->getYear($time_stamp));
 		}
+	}
+	
+	/**
+	 * 国民の休日を返す
+	 * 前日と翌日が祝日の場合に休日とする
+	 *
+	 * @param {int} $time_stamp 当該月のタイムスタンプ
+	 * @return {array}
+	 */
+	public function getNationalHoliday(int $time_stamp): array {
+		try {
+			$one_day = 86400;
+			$yesterday = 0;
+			$res = [];
+			
+			/**
+			 * ２進数で昨日と一昨日の祝日フラグを立てる
+			 * 祝日:1, それ以外:0
+			 * １の位：昨日
+			 * 十の位：一昨日
+			 */
+			$holidays = 0;
+
+			// 前月末日の00:00のtimestampを取得
+			$year  = (int)date("Y", $time_stamp);
+			$month = (int)date("m", $time_stamp);
+			$baseSec = mktime(0, 0, 0, $month, 0, $year);
+
+			// 翌月1日のtimestamp
+			$month++;
+			$targetSec = mktime(0, 0, 0, $month, 1, $year);
+			
+			while ($baseSec <= $targetSec) {
+				$fin = $this->makeDateArray($baseSec);
+				if ($fin['Holiday'] != 0 && $fin['Holiday'] != JD_COMPENSATING_HOLIDAY) {
+					$isHoliday = 1;
+					if ($holidays == 2) {
+						// 本日が祝日で且つ一昨日が祝日で昨日が平日(２進数で0b10)
+						$res[$yesterday] = JD_NATIONAL_HOLIDAYS;
+					}
+				} else {
+					$isHoliday = 0;
+				}
+				
+				$holidays = $holidays << 1;
+				$holidays += $isHoliday;
+				$holidays = $holidays & 3;
+				
+				$yesterday = $fin['Day'];
+				$baseSec += $one_day;
+			}
+		} catch (Exception $e) {
+			$res = [];
+		}
+		return $res;
 	}
 	
 	/**
@@ -299,10 +358,10 @@ class DateJa
 	public function makeDateArray(int $time_stamp): array
 	{
 		$res = array(
-			"Year"    => $this->getYear($time_stamp), 
-			"Month"   => $this->getMonth($time_stamp), 
+			"Year"    => $this->getYear($time_stamp),
+			"Month"   => $this->getMonth($time_stamp),
 			"Day"     => $this->getDay($time_stamp),
-			"Weekday" => $this->getWeekday($time_stamp), 
+			"Weekday" => $this->getWeekday($time_stamp),
 		);
 		
 		$holiday_list = $this->getHolidayList($time_stamp);
@@ -398,6 +457,9 @@ class DateJa
 		if ($year == 1989) {
 			$res[24] = JD_THE_SHOWA_EMPEROR_DIED;
 		}
+		if ($year >= 2020) {
+			$res[23] = JD_THE_EMPEROR_S_BIRTHDAY;
+		}
 		return $res;
 	}
 	
@@ -474,6 +536,10 @@ class DateJa
 			if (($this->getWeekday(mktime(0, 0, 0, 5, 4, $year)) == JD_SUNDAY) || ($this->getWeekday(mktime(0, 0, 0, 5, 3, $year)) == JD_SUNDAY)) {
 				$res[6] = JD_COMPENSATING_HOLIDAY;
 			}
+		}
+		if ($year == 2019) {
+			// 天皇即位
+			$res[1] = JD_EMPEROR_ENTHRONEMENT_DAY;
 		}
 		return $res;
 	}
@@ -586,6 +652,12 @@ class DateJa
 				$res[11] = JD_COMPENSATING_HOLIDAY;
 			}
 		}
+		
+		if ($year == 2019) {
+			// 即位礼正殿の儀
+			$res[22] = JD_REGNAL_DAY;
+		}
+		
 		return $res;
 	}
 	
@@ -624,7 +696,7 @@ class DateJa
 	public function getDecemberHoliday(int $year): array
 	{
 		$res = array();
-		if ($year >= 1989) {
+		if ($year >= 1989 && $year < 2019) {
 			$res[23] = JD_THE_EMPEROR_S_BIRTHDAY;
 		}
 		if ($this->getWeekDay(mktime(0, 0, 0, 12, 23, $year)) == JD_SUNDAY) {
