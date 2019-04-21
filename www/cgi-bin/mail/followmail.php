@@ -11,9 +11,9 @@
 *	廃止
 */
 
-require_once 'http.php';
-require_once 'conndb.php';
-require_once 'followmailtext.php';
+require_once dirname(__FILE__).'/http.php';
+require_once dirname(__FILE__).'/conndb.php';
+require_once dirname(__FILE__).'/followmailtext.php';
 
 class Followmail {
 
