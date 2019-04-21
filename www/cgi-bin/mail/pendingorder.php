@@ -5,7 +5,6 @@
 */
 
 require_once dirname(__FILE__).'/conndb.php';
-use package\holiday\DateJa;
 
 class Pendingorder {
 
@@ -32,15 +31,13 @@ class Pendingorder {
 				}
 				
 				$date = explode('-',$orders[$i]['schedule4']);
-			    if($date[0]!="0000"){
-				    $baseSec = mktime(0, 0, 0, $date[1], $date[2], $date[0]);
-				    $fin = $this->ja->makeDateArray($baseSec);							// 受渡日付情報
-				    $deli = $fin;													// 受渡日の曜日を取得
-				    $deli['Weekname'] = mb_convert_encoding($this->ja->viewWeekday($fin['Weekday']),'utf-8','euc-jp');
-			    }else{
-			    	$deli['Weekname'] = "-";
-			    }
-			    
+				if($date[0]!="0000"){
+					$baseSec = mktime(0, 0, 0, $date[1], $date[2], $date[0]);
+					$deli = $this->ja->makeDateArray($baseSec);							// 受渡日付情報
+				}else{
+					$deli['Weekname'] = "-";
+				}
+				
 				// 件名
 				$mail_subject = 'ご注文はまだ確定しておりません';
 				

@@ -5,7 +5,6 @@
 */
 
 require_once dirname(__FILE__).'/conndb.php';
-use package\holiday\DateJa;
 
 class Startjob {
 

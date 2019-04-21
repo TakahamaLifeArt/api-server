@@ -6,8 +6,9 @@
 *			2014-08-15 当該クラス未使用
 *			2014-11-20 Weblibで試験的に使用
 */
-require_once dirname(__FILE__).'/jd/japaneseDate.php';
 require_once dirname(__FILE__).'/MYDB2.php';
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/DateJa/vendor/autoload.php';
+use Alesteq\DateJa\DateJa;
 class Estimate Extends MYDB2 {
 /**
 *	calcSilkPrintFee			シルクスクリーンのプリント代を返す
@@ -611,7 +612,6 @@ class Estimate Extends MYDB2 {
 	
 	/*
 	*	今日注文確定とし希望納期までの営業日数を返す
-	*	depend: class japaneseDate
 	*
 	*	@targetSec		納期（UNIXタイムスタンプの秒数）
 	*	@cuttime		〆時刻（default: 13:00）
@@ -621,7 +621,7 @@ class Estimate Extends MYDB2 {
 	*	return		営業日数を返す
 	*/
 	public function getWorkDay($targetSec, $cuttime=13, $_from_holiday=0, $_to_holiday=0){
-		$jd = new japaneseDate();
+		$jd = new DateJa();
 		$workday=0;
 		$one_day=86400;
 		

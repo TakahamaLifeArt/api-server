@@ -14,7 +14,6 @@
 require_once 'http.php';
 require_once 'conndb.php';
 require_once 'followmailtext.php';
-use package\holiday\DateJa;
 
 class Followmail {
 

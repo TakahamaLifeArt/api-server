@@ -5,7 +5,6 @@
 */
 
 require_once dirname(__FILE__).'/exwmail.php';
-use package\holiday\DateJa;
 
 // 休業日の場合は何もしない
 $ja = new DateJa();

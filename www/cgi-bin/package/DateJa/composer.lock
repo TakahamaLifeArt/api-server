@@ -1,0 +1,59 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "4154047964bb07b7cf5e83bafe53eb9a",
+    "packages": [
+        {
+            "name": "alesteq/date-ja",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/alesteq/DateJa.git",
+                "reference": "d4f93febf3e720cb3e6cbefa6597b41fe6fe5df5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/alesteq/DateJa/zipball/d4f93febf3e720cb3e6cbefa6597b41fe6fe5df5",
+                "reference": "d4f93febf3e720cb3e6cbefa6597b41fe6fe5df5",
+                "shasum": ""
+            },
+            "require-dev": {
+                "phpunit/phpunit": "6.4.*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Alesteq\\DateJa\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Kyoda",
+                    "email": "ks.desk@gmail.com"
+                }
+            ],
+            "description": "日本の暦と祝日・休日、及びカレンダーを取得するライブラリ",
+            "keywords": [
+                "calendar",
+                "date",
+                "holiday"
+            ],
+            "time": "2019-04-20T23:04:39+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}

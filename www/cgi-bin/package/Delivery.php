@@ -9,8 +9,8 @@
 declare(strict_types=1);
 namespace package;
 require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/config.php';
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/holiday/DateJa.php';
-use package\holiday\DateJa;
+require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/DateJa/vendor/autoload.php';
+use Alesteq\DateJa\DateJa;
 use \Exception;
 class Delivery {
 
@@ -47,7 +47,7 @@ class Delivery {
 				$baseSec += $one_day;
 			}
 		} catch (Exception $e) {
-			$res = 0;
+			$workday = 0;
 		}
 		return $workday;
 	}
@@ -75,13 +75,11 @@ class Delivery {
 
 			if(empty($baseSec)){
 				$time_stamp = time()+39600;					// 13:00からは翌日扱いのため11時間の秒数分を足す
+				$year  = date("Y", $time_stamp);
+				$month = date("m", $time_stamp);
+				$day   = date("d", $time_stamp);
+				$baseSec = mktime(0, 0, 0, (int)$month, (int)$day, (int)$year);
 			}
-			
-			// 注文確定日の00:00のtimestampを取得
-			$year  = date("Y", $time_stamp);
-			$month = date("m", $time_stamp);
-			$day   = date("d", $time_stamp);
-			$baseSec = mktime(0, 0, 0, (int)$month, (int)$day, (int)$year);
 
 			// 発送日を算出
 			while($counter<$workday){
@@ -97,10 +95,6 @@ class Delivery {
 
 			// お届け日の日付情報
 			$fin = $ja->makeDateArray($baseSec);
-
-			// 曜日を取得
-			$weekday = $ja->viewWeekday($fin['Weekday']);
-			$fin['Weekname'] = $weekday;
 		} catch (Exception $e) {
 			$fin = array();
 		}
@@ -119,29 +113,6 @@ class Delivery {
 	{
 		$ja = new DateJa();
 		return $ja->getCalendar($year, $month);
-	}
-
-
-	/**
-	 * 未使用
-	 * タイムスタンプを展開して、日付の詳細配列を取得する
-	 *
-	 * @param int $time_stamp タイムスタンプ
-	 * @return int タイムスタンプ
-	 */
-	public function makeDateArray($time_stamp)
-	{
-		$res = array(
-			"Year"    => $this->getYear($time_stamp),
-			"Month"   => $this->getMonth($time_stamp),
-			"Day"     => $this->getDay($time_stamp),
-			"Weekday" => $this->getWeekday($time_stamp),
-		);
-
-		$holiday_list = $this->getHolidayList($time_stamp);
-		$res["Holiday"] = isset($holiday_list[$res["Day"]]) ? $holiday_list[$res["Day"]] : JD_NO_HOLIDAY;
-		$res["Weekname"] = $this->viewWeekday($res["Weekday"]);
-		return $res;
 	}
 }
 ?>
