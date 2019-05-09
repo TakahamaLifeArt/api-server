@@ -185,6 +185,7 @@ try {
 						throw new Exception('400');
 					} else if (empty($m[1])) {
 						// アイテムの基本情報
+						if (!ctype_digit(strval($m[0]))) throw new Exception('400');
 						$res = $pro->getItem($m[0]);
 					} else {
 						switch ($m[1]) {
@@ -370,8 +371,8 @@ try {
 				/**
 				 * /holiday/timestamp(sec)
 				 */
-					$deli = new Delivery();
-					$res = $deli->makeDateArray($m[0]);
+//					$deli = new Delivery();
+//					$res = $deli->makeDateArray($m[0]);
 				}
 				break;
 			case 'calendars':
