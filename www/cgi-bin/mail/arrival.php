@@ -4,11 +4,10 @@
 *	 1.商品（アンケートページへのリンク有り）
 *	 2.資料（保留）
 *	お届予定日の2日後の12:00に自動送信
-*
-*	廃止
 */
 
 require_once dirname(__FILE__).'/conndb.php';
+use Alesteq\DateJa\DateJa;
 
 class Arrival {
 

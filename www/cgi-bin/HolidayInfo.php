@@ -18,7 +18,7 @@ class HolidayInfo {
 	private $_info = array();
 	
 	public function __construct() {
-		$filename = $_SERVER['DOCUMENT_ROOT'].'/const/config_holiday.php';
+		$filename = __DIR__.'/../html/const/config_holiday.php';
 		$fp = fopen($filename, 'r+b');
 		if($fp===false) return;
 

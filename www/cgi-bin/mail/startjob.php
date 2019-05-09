@@ -5,6 +5,7 @@
 */
 
 require_once dirname(__FILE__).'/conndb.php';
+use Alesteq\DateJa\DateJa;
 
 class Startjob {
 

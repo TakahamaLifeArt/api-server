@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__.'/HolidayInfo.php';
+
 define('_ALL_EMAIL', 'all@takahama428.com');
 define('_INFO_EMAIL', 'info@takahama428.com');
 define('_ORDER_EMAIL', 'order@takahama428.com');
@@ -15,7 +17,6 @@ define('_MARGIN_2', 1.35);		// 300枚以上の仕入れ値に対する掛け率
 define('_BEGINNING_OF_PERIOD', '4');
 define('_APPLY_TAX_CLASS', '2014-05-26');	// 発送日が2014-05-26以降は外税方式を適用
 
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/HolidayInfo.php';
 $hol = new HolidayInfo();
 $holidayHash = $hol->getData(array('notice'=>true));
 

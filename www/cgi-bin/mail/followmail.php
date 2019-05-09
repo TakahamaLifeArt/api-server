@@ -14,6 +14,7 @@
 require_once dirname(__FILE__).'/http.php';
 require_once dirname(__FILE__).'/conndb.php';
 require_once dirname(__FILE__).'/followmailtext.php';
+use Alesteq\DateJa\DateJa;
 
 class Followmail {
 
@@ -99,7 +100,7 @@ class Followmail {
 }
 
 
-
+// 廃止
 exit;
 
 

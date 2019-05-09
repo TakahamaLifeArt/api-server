@@ -15,8 +15,7 @@
 
 require_once dirname(__FILE__).'/../config.php';
 require_once dirname(__FILE__).'/../MYDB2.php';
-require_once $_SERVER['DOCUMENT_ROOT'].'/../cgi-bin/package/DateJa/vendor/autoload.php';
-use Alesteq\DateJa\DateJa;
+require_once dirname(__FILE__).'/../package/DateJa/vendor/autoload.php';
 
 class ConnDB extends MYDB2{
 
