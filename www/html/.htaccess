@@ -6,7 +6,6 @@ ForceType application/x-httpd-php
 # Not found
 <IfModule mod_rewrite.c>
 ErrorDocument 404 /err/err404.php
-ErrorDocument 403 /err/err403.php
 </IfModule>
 
 RewriteEngine on
