@@ -1,2 +1,2 @@
 # api-server
-takahamalifeart.com
+https://takahamalifeart.com
