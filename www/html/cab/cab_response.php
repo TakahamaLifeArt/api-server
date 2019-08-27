@@ -2,7 +2,7 @@
 /*
 *	キャブEDI発注の回答ファイルの確認とデータベースの発注状況を更新
 *	log		: 2014-11-15 created
-*			
+*			: 2019-05-29 例外のメッセージを更新
 */
 
 /*
@@ -129,7 +129,7 @@ try{
 	}
 	
 }catch(Exception $e){
-	//$res = "Exception Error; ".$e->getMessage();
+	$res = "Exception Error; ".$e->getMessage();
 }
 echo serialize($res);
 ?>
