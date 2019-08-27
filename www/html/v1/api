@@ -490,6 +490,9 @@ if(isset($_REQUEST['act'])){
 				}
 			}
 		}
+
+        header('Access-Control-Allow-Origin: *');
+
 		break;
 
 
@@ -640,6 +643,11 @@ if(isset($_REQUEST['act'])){
 		if(isset($_REQUEST['args'])) $dat=$tla->getPrintform($_REQUEST['args']);
 		break;
 		
+	case 'setreceiptcount':
+		$tla = new Members();
+		if(isset($_REQUEST['args'])) $dat=$tla->setReceiptCount($_REQUEST['args']);
+		break;
+
 	}
 	
 	if($_REQUEST['output']=='jsonp' && isset($_REQUEST['callback'])){

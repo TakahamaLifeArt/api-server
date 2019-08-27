@@ -13,20 +13,20 @@ require_once dirname(__FILE__).'/MYDB2.php';
 class Members Extends MYDB2 {
 
 /**
- *	fetchAl					プリペアドステートメントから結果を取得し、バインド変数に格納する
- *	sort_size				サイズ名でソートする、usortのユーザー定義関数
- *	getSizerange			指定サイズの商品単価で展開しているサイズリストを返す
- *
- *	getOrderHistory			注文履歴を取得
- *	getDetailsPrint			プリント情報
- *	getProgress				製作の進行状況
- *	getPrintform			請求書・領収書・納品書のデータ
- *	getEstimation			「2014-08-15 未使用」 当該注文の金額情報とアイテム毎のプリント代を算出した1枚あたり金額
- */	
+ * fetchAl				プリペアドステートメントから結果を取得し、バインド変数に格納する
+ * sort_size			サイズ名でソートする、usortのユーザー定義関数
+ * getSizerange			指定サイズの商品単価で展開しているサイズリストを返す
+ * getOrderHistory		注文履歴を取得
+ * getDetailsPrint		プリント情報
+ * getProgress			製作の進行状況
+ * getPrintform			請求書・領収書・納品書のデータ
+ * getEstimation		「2014-08-15 未使用」 当該注文の金額情報とアイテム毎のプリント代を算出した1枚あたり金額
+ * setReceiptCount		領収書の発行回数を設定
+ */
 	
 	
-	public function __construct(){
-	}
+	public function __construct()
+	{}
 	
 	
 	/**
@@ -34,7 +34,8 @@ class Members Extends MYDB2 {
 	*	usortのユーザー定義関数
 	*	getSizerange で使用
 	*/
-	private function sort_size($a, $b){
+	private function sort_size($a, $b)
+	{
 		$tmp=array(
 	    	'70'=>1,'80'=>2,'90'=>3,'100'=>4,'110'=>5,'120'=>6,'130'=>7,'140'=>8,'150'=>9,'160'=>10,
 	    	'JS'=>11,'JM'=>12,'JL'=>13,'WS'=>14,'WM'=>15,'WL'=>16,'GS'=>17,'GM'=>18,'GL'=>19,
@@ -53,9 +54,10 @@ class Members Extends MYDB2 {
 	*	@size		サイズIDまたはサイズ名
 	*	@curdate
 	*
-	*	return		[サイズ名の配列]
+	*	@return		[サイズ名の配列]
 	*/
-	private function getSizerange($item_id, $size, $curdate){
+	private function getSizerange($item_id, $size, $curdate)
+	{
 		if(empty($curdate)) $curdate = date('Y-m-d');
 		$sql = "select * from (item inner join itemprice on item.id=itemprice.item_id) inner join size on size_from=size.id where 
 				itemapply<=? and itemdate>? and itempriceapply<=? and itempricedate>? and item_id=? order by price_0, size_from";
@@ -99,9 +101,10 @@ class Members Extends MYDB2 {
 	*	@orderId 受注No.
 	*	@shipped 0:全て, 1:未発送, 2:発送済み
 	*
-	*	return	[注文情報]
+	*	@return	[注文情報]
 	*/
-	public function getOrderHistory($args, $orderId=0, $shipped=0) {
+	public function getOrderHistory($args, $orderId=0, $shipped=0)
+	{
 		try {
 			$rs = array();
 			if(empty($args)) return;
@@ -311,9 +314,10 @@ class Members Extends MYDB2 {
 	*	プリント情報
 	*	@args	受注No.
 	*
-	*	return	[プリント情報]
+	*	@return	[プリント情報]
 	*/
-	public function getDetailsPrint($args){
+	public function getDetailsPrint($args)
+	{
 		try{
 			$rs = array();
 			if(empty($args)) return;
@@ -379,9 +383,10 @@ class Members Extends MYDB2 {
 	*	製作の進行状況を取得（注文確定で未発送）
 	*	@args	[customer ID, order ID]
 	*
-	*	return	[進行状況]
+	*	@return	[進行状況]
 	*/
-	public function getProgress($args){
+	public function getProgress($args)
+	{
 		try{
 			$rs = array();
 			if(empty($args)) return $rs;
@@ -429,9 +434,10 @@ class Members Extends MYDB2 {
 	*	請求書・領収書・納品書のデータ
 	*	@args	order ID
 	*
-	*	return	[出力情報]
+	*	@return	[出力情報]
 	*/
-	public function getPrintform($args){
+	public function getPrintform($args)
+	{
 		try{
 			$rs = array();
 			if(empty($args)) return;
@@ -584,5 +590,44 @@ class Members Extends MYDB2 {
 		return $rs;
 	}
 	
+	/**
+	* 領収書の発行回数を設定
+	* @param int $id 受注No.
+	*
+	* @return 発行回数
+	*/
+	public function setReceiptCount($id)
+	{
+		if(empty($id)) return;
+
+		try{
+			$conn = self::db_connect();
+
+			$sql = "SELECT progid, receipt_count from progressstatus where orders_id=?";
+			$stmt = $conn->prepare($sql);
+			$stmt->bind_param("i", $id);
+			$stmt->execute();
+			$stmt->store_result();
+			$rec = self::fetchAll($stmt);
+
+			$sql = "update progressstatus set receipt_count=? where progid=?";
+			if ($stmt = $conn->prepare($sql) ) {
+				for($i=0; $i<count($rec); $i++){
+					$rs = $rec[$i]['receipt_count'] += 1;
+					$stmt->bind_param("ii", $rs, $rec[$i]['progid']);
+					$stmt->execute();
+				}
+			} else {
+				throw new Exception();
+			}
+		} catch(Exception $e) {
+			$rs = 0;
+		}
+		
+		$stmt->close();
+		$conn->close();
+		
+		return $rs;
+	}
 }
 ?>
