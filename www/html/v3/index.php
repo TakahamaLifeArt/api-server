@@ -65,7 +65,7 @@ try {
 			throw new Exception('403');
 		}
 		if (in_array(strtolower($host), _MEMBER_HOSTS[_ACCESS_TOKEN])===false) {
-			throw new Exception('401');
+			throw new Exception('412');
 		}
 		
 		parse_str($_SERVER['QUERY_STRING'], $param);
@@ -75,7 +75,8 @@ try {
 		for ($i=0; $i<count($var); $i++) {
 			$q = explode('=', $var[$i]);
 			if ($q[0] !== 'm') continue;
-			$param[$q[0]] = substr($var[$i], strpos($var[$i], '=')+1);
+            $v = substr($var[$i], strpos($var[$i], '=')+1);
+			$param[$q[0]] = $v === false ? '': $v; // 値がない場合は空文字を設定
 		}
 
 		if (empty($param['r'])) {
@@ -320,7 +321,13 @@ try {
 							}
 						} else {
 							if ($m[1]==='sales') {
+							if (empty($param['args'])) {
 								$res = $user->salesVolume($m[0]);
+							} else {
+								// 期間を指定して購入合計を取得
+								$a = json_decode($param['args'], true);
+								$res = $user->salesVolume($m[0], '', $a['end']);
+							}
 							} else if ($m[1]==='pass' && !empty($param['args'])) {
 								$a = json_decode($param['args'], true);
 								$a['id'] = $m[0];
@@ -395,10 +402,10 @@ try {
 		header('HTTP/1.1 200 OK');
 	} else if ('OPTIONS' === $method) {
 		header('Access-Control-Allow-Origin: '.$_SERVER['HTTP_ORIGIN']);
-		//		header('Access-Control-Allow-Credentials: true');
+//		header('Access-Control-Allow-Credentials: true');
 		header('Access-Control-Allow-Methods: POST, PUT, GET, OPTIONS');
 		header('Access-Control-Allow-Headers: '._HTTP_HEADER_KEY);
-//		header('Access-Control-Max-Age: 86400');	// preflight request のレスポンスをキャッシュ（１日）
+		header('Access-Control-Max-Age: 86400');	// preflight request のレスポンスをキャッシュ（１日）
 		header("Content-Length: 0");
 		header('HTTP/1.1 200 OK '.$method);
 //		header("Content-Type: text/plain");
@@ -417,6 +424,8 @@ try {
 		header('HTTP/1.1 401 Unauthorixed');
 	} else if ('404' === $res) {
 		header('HTTP/1.1 404 Not Found');
+	} else if ('412' === $res) {
+		header('HTTP/1.1 412 Precondition Failed');
 	} else if ('418' === $res) {
 		header('HTTP/1.1 418 I\'m a teapot');
 	} else {
