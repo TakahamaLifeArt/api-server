@@ -321,13 +321,13 @@ try {
 							}
 						} else {
 							if ($m[1]==='sales') {
-							if (empty($param['args'])) {
-								$res = $user->salesVolume($m[0]);
-							} else {
-								// 期間を指定して購入合計を取得
-								$a = json_decode($param['args'], true);
-								$res = $user->salesVolume($m[0], '', $a['end']);
-							}
+								if (empty($param['args'])) {
+									$res = $user->salesVolume($m[0]);
+								} else {
+									// 期間を指定して購入合計を取得
+									$a = json_decode($param['args'], true);
+									$res = $user->salesVolume($m[0], '', $a['end']);
+								}
 							} else if ($m[1]==='pass' && !empty($param['args'])) {
 								$a = json_decode($param['args'], true);
 								$a['id'] = $m[0];
