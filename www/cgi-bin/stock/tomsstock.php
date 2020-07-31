@@ -178,7 +178,7 @@ class TomsStock extends MYDB2
             $stmt_count = $conn->prepare($sql1);
 
             // 既存の在庫レコードがあれば更新
-            $sql2 = "update tomsmaster set updated_at=? where jan_code=? limit 1";
+            $sql2 = "update tomsmaster set toms_item_code=?, toms_item_name=?, toms_color_code=?, toms_color_name=?, toms_size_code=?, toms_size_name=?, updated_at=? where jan_code=? limit 1";
             $stmt_update = $conn->prepare($sql2);
 
             // 新規登録
@@ -195,8 +195,8 @@ class TomsStock extends MYDB2
                 if (empty($rec[0]['cnt'])) {
                     $stmt_insert->bind_param(
                         "ssssssss",
-                        $$args[$i]['item_code'],
-                        $$args[$i]['item_name'],
+                        $args[$i]['item_code'],
+                        $args[$i]['item_name'],
                         $args[$i]['color_code'],
                         $args[$i]['color_name'],
                         $args[$i]['size_code'],
@@ -206,7 +206,17 @@ class TomsStock extends MYDB2
                     );
                     $stmt_insert->execute();
                 } else {
-                    $stmt_update->bind_param("ss", date('Y-m-d H:i:s'), $args[$i]['jan_code']);
+                    $stmt_update->bind_param(
+                        "ssssssss",
+                        $args[$i]['item_code'],
+                        $args[$i]['item_name'],
+                        $args[$i]['color_code'],
+                        $args[$i]['color_name'],
+                        $args[$i]['size_code'],
+                        $args[$i]['size_name'],
+                        date('Y-m-d H:i:s'),
+                        $args[$i]['jan_code']
+                    );
                     $stmt_update->execute();
                 }
             }

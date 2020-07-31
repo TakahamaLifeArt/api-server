@@ -69,21 +69,27 @@ if ($decoder->isMultipart()) {
                         }
 
                         // Normalization
-                        $sizename = mb_convert_kana($fld[6], 'a', 'sjis');	// 英数全角を半角に変換
-                        $sizename = str_replace('cm', '', $sizename);
-                        $sizename = mb_convert_encoding($sizename, 'utf-8', 'sjis');
+                        $sizeName = mb_convert_kana($fld[6], 'a', 'sjis');	// 英数全角を半角に変換
+                        $sizeName = str_replace('cm', '', $sizeName);
+                        $sizeName = mb_convert_encoding($sizeName, 'utf-8', 'sjis');
+
+                        $itemName = mb_convert_kana($fld[2], 'aKV', 'sjis');	// 英数全角を半角、半角カタカナを全角に変換
+                        $itemName = mb_convert_encoding($itemName, 'utf-8', 'sjis');
+
+                        $colorName = mb_convert_kana($fld[4], 'aKV', 'sjis');// 英数全角を半角、半角カタカナを全角に変換
+                        $colorName = mb_convert_encoding($colorName, 'utf-8', 'sjis');
 
                         // tomsmaster更新用データ
-                        $tmp = array();
-                        $tmp['item_code'] = $fld[1];
-                        $tmp['item_name'] = $fld[2];
-                        $tmp['color_code'] = $fld[3];
-                        $tmp['color_name'] = $fld[4];
-                        $tmp['size_code'] = $fld[5];
-                        $tmp['size_name'] = $sizename;
-                        $tmp['jan_code'] = $fld[9];
+                        $tmpMaster = array();
+                        $tmpMaster['item_code'] = $fld[1];
+                        $tmpMaster['item_name'] = $itemName;
+                        $tmpMaster['color_code'] = $fld[3];
+                        $tmpMaster['color_name'] = $colorName;
+                        $tmpMaster['size_code'] = $fld[5];
+                        $tmpMaster['size_name'] = $sizeName;
+                        $tmpMaster['jan_code'] = $fld[9];
 
-                        $tomsMaster[] = $tmp;
+                        $tomsMaster[] = $tmpMaster;
 
                         // アイテムのカラー毎に集計
                         if ($curItem !== $fld[1].'_'.$fld[3]) {
@@ -98,42 +104,42 @@ if ($decoder->isMultipart()) {
                         }
 
                         // サイズの呼称を統一する
-                        switch ($sizename) {
+                        switch ($sizeName) {
                             case 'フリー':
                             case 'F':
-                                $sizename = 'Free';
+                                $sizeName = 'Free';
                                 break;
                             case 'LL':
-                                $sizename = 'XL';
+                                $sizeName = 'XL';
                                 break;
                             case 'XXL':
                                 // 2XLとXXLが混在している場合は、2XLの在庫を使用する
                                 if (isset($tmp[$curItem]['3L'])) {
-                                    $sizename = '';
+                                    $sizeName = '';
                                 } else {
-                                    $sizename = '3L';
+                                    $sizeName = '3L';
                                 }
                                 break;
                             case '2XL':
-                                $sizename = '3L';
+                                $sizeName = '3L';
                                 break;
                             case 'XXXL':
-                                $sizename = '4L';
+                                $sizeName = '4L';
                                 break;
                             case 'XXXXL':
-                                $sizename = '5L';
+                                $sizeName = '5L';
                                 break;
                             case 'XXXXXL':
-                                $sizename = '6L';
+                                $sizeName = '6L';
                                 break;
                             case 'XXXXXXL':
-                                $sizename = '7L';
+                                $sizeName = '7L';
                                 break;
-                            case 'SS':$sizename = 'XS';
+                            case 'SS':$sizeName = 'XS';
                                 break;
                         }
 
-                        if ($sizename === '') {
+                        if ($sizeName === '') {
                             continue;
                         }
 
@@ -152,10 +158,10 @@ if ($decoder->isMultipart()) {
                         }
 
                         // サイズ毎に一時配列で集計、サイズ名が重複している場合は上書き
-                        $tmp[$curItem][$sizename] = array(
+                        $tmp[$curItem][$sizeName] = array(
                             'item_code'=>strtolower($item_code),
                             'color_code'=>$fld[3],
-                            'size_name'=>$sizename,
+                            'size_name'=>$sizeName,
                             'amount'=>$fld[8],
                             'jancode'=>$fld[9],
                         );
