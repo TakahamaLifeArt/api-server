@@ -163,19 +163,19 @@ class Calc extends Master {
 						$tmp['silk'] = $this->calcSilkPrintFee($val['vol'], $val['ink'], $val['ids'], $val['size'], $val['repeatSilk']);
 						
 						// シルクの版代を一時集計、同版分類が同じで且つ枚数レンジ分類が違うアイテムに対応するため
-//						foreach ($tmp['plates'] as $g2Id=>$charge) {
-//							$silkPlateCharge[$g2Id]['fee'] += $charge;
-//							$len = count($tmp['group2'][$g2Id]);
-//							for ($i=0; $i<$len; $i++) {
-//								$itemId = $tmp['group2'][$g2Id][$i];
-//								$silkPlateCharge[$g2Id]['vol'] += $val['ids'][$itemId];
-//							}
-//							if (empty($silkPlateCharge[$g2Id]['item'])) {
-//								$silkPlateCharge[$g2Id]['item'] = $val['ids'];
-//							} else {
-//								$silkPlateCharge[$g2Id]['item'] += $val['ids'];
-//							}
-//						}
+						//						foreach ($tmp['plates'] as $g2Id=>$charge) {
+						//							$silkPlateCharge[$g2Id]['fee'] += $charge;
+						//							$len = count($tmp['group2'][$g2Id]);
+						//							for ($i=0; $i<$len; $i++) {
+						//								$itemId = $tmp['group2'][$g2Id][$i];
+						//								$silkPlateCharge[$g2Id]['vol'] += $val['ids'][$itemId];
+						//							}
+						//							if (empty($silkPlateCharge[$g2Id]['item'])) {
+						//								$silkPlateCharge[$g2Id]['item'] = $val['ids'];
+						//							} else {
+						//								$silkPlateCharge[$g2Id]['item'] += $val['ids'];
+						//							}
+						//						}
 						
 						// デジ転で同じデザインで枚数レンジ分類が違うアイテムは版代を除く
 						if (++$g1Count>1) {
@@ -185,12 +185,12 @@ class Calc extends Master {
 						// デジタル転写
 						$tmp['digit'] = $this->calcDigitFee($val['vol'], 0, $val['ids'], $val['repeat']);
 						// デジタル転写の版代をアイテム毎に按分
-//						if (!empty($tmp['plates'])) {
-//							$per = $tmp['plates'] / $val['vol'];
-//							foreach ($val['ids'] as $itemId=>$vol) {
-//								$print_fee['item'][$itemId]['fee'] += $per * $vol;
-//							}
-//						}
+						//						if (!empty($tmp['plates'])) {
+						//							$per = $tmp['plates'] / $val['vol'];
+						//							foreach ($val['ids'] as $itemId=>$vol) {
+						//								$print_fee['item'][$itemId]['fee'] += $per * $vol;
+						//							}
+						//						}
 						
 						// インクジェット
 						if ($val['inkjet'] === true) {
@@ -215,26 +215,26 @@ class Calc extends Master {
 							$print_fee[$printMethod] += $dat['tot'];
 							
 							// アイテム毎に集計
-//							$pressPer = $tmp['press'] / $val['vol'];
-//							foreach ($val['ids'] as $itemId=>$vol) {
-//								$print_fee['item'][$itemId]['fee'] += $pressPer * $vol;
-//								if (!empty($tmp['extra'][$itemId])) {
-//									$print_fee['item'][$itemId]['fee'] += $tmp['extra'][$itemId];
-//								}
-//							}
+							//							$pressPer = $tmp['press'] / $val['vol'];
+							//							foreach ($val['ids'] as $itemId=>$vol) {
+							//								$print_fee['item'][$itemId]['fee'] += $pressPer * $vol;
+							//								if (!empty($tmp['extra'][$itemId])) {
+							//									$print_fee['item'][$itemId]['fee'] += $tmp['extra'][$itemId];
+							//								}
+							//							}
 						}
 					}
 					
 					// シルクの版代をアイテム毎に按分
 					// 同版分類が同じで且つ枚数レンジ分類が違うアイテムに対応
-//					if (count($silkPlateCharge) > 0) {
-//						foreach ($silkPlateCharge as $g2Id=>$v) {
-//							$per = $v['fee'] / $v['vol'];
-//							foreach ($v['item'] as $itemId=>$amount) {
-//								$print_fee['item'][$itemId]['fee'] += $per * $amount;
-//							}
-//						}
-//					}
+					//					if (count($silkPlateCharge) > 0) {
+					//						foreach ($silkPlateCharge as $g2Id=>$v) {
+					//							$per = $v['fee'] / $v['vol'];
+					//							foreach ($v['item'] as $itemId=>$amount) {
+					//								$print_fee['item'][$itemId]['fee'] += $per * $amount;
+					//							}
+					//						}
+					//					}
 					
 					// 箇所毎（サイズとインク色数別）に最安プリント方法を判定
 					asort($print_fee, SORT_NUMERIC);
@@ -244,22 +244,22 @@ class Calc extends Master {
 					$printing[$posName.'-'.$design][$printName] += $fee;
 					
 					// プリント方法毎の代金を保持
-//					foreach($print_fee as $printName => $fee){
-//						$detail[$printName] += $fee;
-//					}
+					//					foreach($print_fee as $printName => $fee){
+					//						$detail[$printName] += $fee;
+					//					}
 					
 					// アイテム毎に集計
-//					foreach($print_fee['item'] as $itemId=> $val){
-//						$detail['item'][$itemId] = $val['fee'];
-//					}
+					//					foreach($print_fee['item'] as $itemId=> $val){
+					//						$detail['item'][$itemId] = $val['fee'];
+					//					}
 				}
 			}
 			
 			// アイテムごとに浮動小数点を丸める
-//			foreach($print_fee['item'] as &$val){
-//				$val['fee'] = round($val['fee']);
-//			}
-//			unset($val);
+			//			foreach($print_fee['item'] as &$val){
+			//				$val['fee'] = round($val['fee']);
+			//			}
+			//			unset($val);
 			
 		} catch(Exception $e) {
 			$min_tot = '0';
@@ -307,8 +307,9 @@ class Calc extends Master {
 		} catch (Exception $e) {
 			$r = FALSE;
 		}
-		$stmt->close();
-//		$conn->close();
+
+		if ($stmt) $stmt->close();
+
 		return $r;
 	} 
 	
@@ -402,8 +403,8 @@ class Calc extends Master {
 			$rs['tot'] = 0;
 		}
 
-		$stmt->close();
-//		$conn->close();
+		if ($stmt) $stmt->close();
+
 		return $rs;
 	}
 
@@ -498,7 +499,8 @@ class Calc extends Master {
 			$rs['tot'] = 0;
 		}
 
-		$stmt->close();
+		if ($stmt) $stmt->close();
+
 		return $rs;
 	}
 
@@ -556,8 +558,8 @@ class Calc extends Master {
 			$rs['tot'] = 0;
 		}
 
-		$stmt->close();
-//		$conn->close();
+		if ($stmt) $stmt->close();
+
 		return $rs;
 	}
 
@@ -621,8 +623,8 @@ class Calc extends Master {
 			$rs['tot'] = 0;
 		}
 
-		$stmt->close();
-//		$conn->close();
+		if ($stmt) $stmt->close();
+
 		return $rs;
 	}
 
@@ -697,8 +699,8 @@ class Calc extends Master {
 			$rs['tot'] = 0;
 		}
 
-		$stmt->close();
-//		$conn->close();
+		if ($stmt) $stmt->close();
+
 		return $rs;
 	}
 	

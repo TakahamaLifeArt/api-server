@@ -266,62 +266,67 @@ if(isset($_REQUEST['act'])){
 	/**
 	* 428HPとstaff-tshirt 10秒見積もり(/price/js/estimate.js)
 	*/
-		$sheetsize = '1';
-		if(isset($_REQUEST['sheetsize'])){
-			if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
-				$sheetsize = $_REQUEST['sheetsize'];
-			}
-		}
-
-		$curdate = date('Y-m-d');
-		// 2017-05-25 00:00:00 から仕様変更
-		if (strtotime('2017-05-25 00:00:00') <= time()) {
-			$isSpecVer2 = true;
-		} else {
-			$isSpecVer2 = false;
-		}
-
-		$calc = new Calc($curdate, $sheetsize);
-
-		// インクジェット可能なアイテムIDを取得
-		$ids = $mst->itemIdOf(85, NULL, "tag");
-
-		if(isset($_REQUEST['itemid'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
-			for($i=0; $i<count($_REQUEST['itemid']); $i++){
-				$isInkjet = in_array($_REQUEST['itemid'][$i], $ids);
-				if(isset($_REQUEST['option'])){
-					$inkjetOption = array($_REQUEST['option']=>$_REQUEST['amount']);
-				}else{
-					$inkjetOption = array($_REQUEST['amount']);
-				}
-				for ($p=0; $p<count($_REQUEST['ink']); $p++) {
-					$args[$_REQUEST['itemid'][$i]][] = array('itemid' => $_REQUEST['itemid'][$i],
-															 'amount' => $_REQUEST['amount'],
-															 'ink' => $_REQUEST['ink'][$p],
-															 'pos' => $_REQUEST['pos'][$p],
-															 'size' => $_REQUEST['size'],
-															 'inkjet' => $isInkjet,
-															 'option' => $inkjetOption
-															);
+		try {
+			$sheetsize = '1';
+			if(isset($_REQUEST['sheetsize'])){
+				if($_REQUEST['sheetsize']=='1' || $_REQUEST['sheetsize']=='0.5' || $_REQUEST['sheetsize']=='0.25'){
+					$sheetsize = $_REQUEST['sheetsize'];
 				}
 			}
-			if (isSpecVer2) {
-				foreach($args as $itemid=>$val){
-					$res = $calc->printfee2($val);
-					$res['itemid'] = $itemid;
-					$dat[] = $res;
-				}
+
+			$curdate = date('Y-m-d');
+			// 2017-05-25 00:00:00 から仕様変更
+			if (strtotime('2017-05-25 00:00:00') <= time()) {
+				$isSpecVer2 = true;
 			} else {
-				foreach($args as $itemid=>$val){
-					$res = $calc->printfee($val);
-					$res['itemid'] = $itemid;
-					$dat[] = $res;
-				}
+				$isSpecVer2 = false;
 			}
-			
-		}else{
+
+			$calc = new Calc($curdate, $sheetsize);
+
+			// インクジェット可能なアイテムIDを取得
+			$ids = $mst->itemIdOf(85, NULL, "tag");
+
+			if(isset($_REQUEST['itemid'],$_REQUEST['amount'],$_REQUEST['ink'],$_REQUEST['pos'])){
+				for($i=0; $i<count($_REQUEST['itemid']); $i++){
+					$isInkjet = in_array($_REQUEST['itemid'][$i], $ids);
+					if(isset($_REQUEST['option'])){
+						$inkjetOption = array($_REQUEST['option']=>$_REQUEST['amount']);
+					}else{
+						$inkjetOption = array($_REQUEST['amount']);
+					}
+					for ($p=0; $p<count($_REQUEST['ink']); $p++) {
+						$args[$_REQUEST['itemid'][$i]][] = array('itemid' => $_REQUEST['itemid'][$i],
+																'amount' => $_REQUEST['amount'],
+																'ink' => $_REQUEST['ink'][$p],
+																'pos' => $_REQUEST['pos'][$p],
+																'size' => $_REQUEST['size'],
+																'inkjet' => $isInkjet,
+																'option' => $inkjetOption
+																);
+					}
+				}
+				if (isSpecVer2) {
+					foreach($args as $itemid=>$val){
+						$res = $calc->printfee2($val);
+						$res['itemid'] = $itemid;
+						$dat[] = $res;
+					}
+				} else {
+					foreach($args as $itemid=>$val){
+						$res = $calc->printfee($val);
+						$res['itemid'] = $itemid;
+						$dat[] = $res;
+					}
+				}
+				
+			}else{
+				$dat = array('printfee'=>'0');
+			}
+		} catch (Exception $e) {
 			$dat = array('printfee'=>'0');
 		}
+
 		break;
 
 	case 'estimateeach':
@@ -654,9 +659,9 @@ if(isset($_REQUEST['act'])){
 	
 		$json = new Services_JSON();
 		$res = $_REQUEST['callback'].'('.$json->encode($dat).')';
-		header("Content-Type: text/javascript; charset=utf-8");
+		//header("Content-Type: text/javascript; charset=utf-8");
 		
-		//header("Content-Type: application/javascript; charset=utf-8");
+		header("Content-Type: application/javascript; charset=utf-8");
 
 	}else if($_REQUEST['output']=='json'){
 		$json = new Services_JSON(SERVICES_JSON_LOOSE_TYPE);
