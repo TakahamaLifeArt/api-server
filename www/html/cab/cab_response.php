@@ -83,7 +83,7 @@ try{
 	
 	$list = $cab->getFileList("./response", "J[0-9]????????????[0-9]");
 	if(empty($list)){
-		throw new Exception('no such response file exists.');
+		// throw new Exception('no such response file exists.');
 	}
 	
 	// 発注回答を確認してデータベース更新

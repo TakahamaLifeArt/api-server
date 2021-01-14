@@ -123,6 +123,9 @@ if ($decoder->isMultipart()) {
                             case '2XL':
                                 $sizeName = '3L';
                                 break;
+                            case '3XL':
+                                $sizeName = '4L';
+                                break;
                             case 'XXXL':
                                 $sizeName = '4L';
                                 break;
