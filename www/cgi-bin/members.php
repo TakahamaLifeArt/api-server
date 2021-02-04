@@ -208,36 +208,6 @@ class Members Extends MYDB2 {
 			
 			$idx = -1;
 			for ($i=0, $len=count($rec); $i<$len; $i++) {
-				/*
-				 * 2016-04-11 修正
-				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_0*margin_pvt*(1+(taxratio/100))+9,-1) else truncate(price_0*margin_pvt+9,-1) end) as price_color,
-				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_1*margin_pvt*(1+(taxratio/100))+9,-1) else truncate(price_1*margin_pvt+9,-1) end) as price_white,
-				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_0*'._MARGIN_1.'*(1+(taxratio/100))+9,-1) else truncate(price_0*'._MARGIN_1.'+9,-1) end) as price_color_over149,
-				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_1*'._MARGIN_1.'*(1+(taxratio/100))+9,-1) else truncate(price_1*'._MARGIN_1.'+9,-1) end) as price_white_over149,
-				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_0*'._MARGIN_2.'*(1+(taxratio/100))+9,-1) else truncate(price_0*'._MARGIN_2.'+9,-1) end) as price_color_over299,
-				 (case when schedule3<'"._APPLY_TAX_CLASS."' then truncate(price_1*'._MARGIN_2.'*(1+(taxratio/100))+9,-1) else truncate(price_1*'._MARGIN_2.'+9,-1) end) as price_white_over299,
-				 
-				if(isset($rec[$i]['price'])){
-					$costHash = array($rec[$i]['price']);
-				}else if($rec[$i]['color']=='ナチュラル' && ($rec[$i]['itemid']==112 || $rec[$i]['itemid']==212)){
-					$costHash = array($rec[$i]['price_white'], $rec[$i]['price_white_over149'], $rec[$i]['price_white_over299']);
-				}else if($rec[$i]['color']=='ホワイト'){
-					$costHash = array($rec[$i]['price_white'], $rec[$i]['price_white_over149'], $rec[$i]['price_white_over299']);
-				}else{
-					$costHash = array($rec[$i]['price_color'], $rec[$i]['price_color_over149'], $rec[$i]['price_color_over299']);
-				}
-				
-				if($rec[$i]['amount']>149){
-					if($amount<300){
-						$cost = $costHash[1];
-					}else{
-						$cost = $costHash[2];
-					}
-				}else{
-					$cost = $costHash[0];
-				}
-				*/
-				
 				if ($rec[$i]['master_id']==0) {
 					$cost = $rec[$i]['price'];
 				} else {
