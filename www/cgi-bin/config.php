@@ -14,6 +14,9 @@ define('_TOLL_FREE', '0120-130-428');
 define('_MARGIN_1', 1.6);		// 149-299枚までの仕入れ値に対する掛け率
 define('_MARGIN_2', 1.35);		// 300枚以上の仕入れ値に対する掛け率
 
+// 2021-01-28から、Tシャツとスウェットに適用
+define('_APPLY_EXTRA_MARGIN', '2021-01-28');
+
 define('_BEGINNING_OF_PERIOD', '4');
 define('_APPLY_TAX_CLASS', '2014-05-26');	// 発送日が2014-05-26以降は外税方式を適用
 

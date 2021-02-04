@@ -294,11 +294,26 @@ class Master{
 			$result = exe_sql($conn, $sql);
 			$rec = mysqli_fetch_assoc($result);
 			if(!is_null($amount) && $rec['maker_id']!=10 && $amount>149){
-				if($amount<300){
-					$margin = _MARGIN_1;
-				}else{
-					$margin = _MARGIN_2;
+				// 単価の掛け率
+				$category_id = $this->getCategoryId($id);
+				$marginPvt = $this->getMargin($category_id, $curdate);
+
+				if (empty($marginPvt)) {
+					if($amount<300){
+						$margin = _MARGIN_1;
+					}else{
+						$margin = _MARGIN_2;
+					}
+				} else {
+					if ($amount < 300) {
+						$margin = $marginPvt[1];
+					} else if ($amount < 500) {
+						$margin = $marginPvt[2];
+					} else {
+						$margin = $marginPvt[3];
+					}
 				}
+
 				$sql = sprintf("select size_from as sizeid, truncate(price_0 * %F * (1+".$tax.")+9,-1) as price_color, 
 				truncate(price_1 * %F * (1+".$tax.")+9,-1) as price_white, price_maker_0 as maker_color, price_maker_1 as maker_white 
 				from itemprice  where itempriceapply<='%s' and itempricedate>'%s' and item_id=%d order by size_from",
@@ -384,31 +399,6 @@ class Master{
 
 		return $res;
 	}
-		
-		
-	// テスト用
-//	public function getPrintPattern($id) {
-//		try{
-//			$conn = db_connect();
-//
-//			$sql = sprintf("select printposition.id as id, category_type as category, item_type as item, position_type as pos, 
-//			front.name_list as front, back.name_list as back, side.name_list as side from (printposition 
-//			left join printpattern as front on frontface=front.id) 
-//			left join printpattern as back on backface=back.id 
-//			left join printpattern as side on sideface=side.id where printposition.id=%d group by printposition.id", $id);
-//			
-//			$result = exe_sql($conn, $sql);
-//			while ($rec = mysqli_fetch_assoc($result)) {
-//				$res[] = $rec;
-//			}
-//			
-//		}catch(Exception $e){
-//			$res = array();
-//		}
-//		mysqli_close($conn);
-//
-//		return $res;
-//	}
 	
 	
 	
@@ -481,8 +471,6 @@ class Master{
 			$rec = mysqli_fetch_assoc($result);
 			if($rec['color_id']==59){
 				$fldPrice='price_1';
-//			}else if($rec['color_id']==42 && ($id==112 || $id==212)){
-//				$fldPrice='price_1';
 			}else{
 				$fldPrice='price_0';
 				
@@ -693,7 +681,6 @@ class Master{
 			
 			$result = exe_sql($conn, $sql);
 			if(is_array($id) || $mode=='id'){	// itemOf で使用
-//				$brandTagId = array(43,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70);
 				$i = -1;
 				while($r = mysqli_fetch_assoc($result)){
 					if(empty($res) || $res[$i]['item_name']!=$r['item_name']){
@@ -725,20 +712,7 @@ class Master{
 							$tmp[$r['size_from']] = true;
 							$sizeHash[] = array('name'=>$r['size_name']);
 						}
-					}
-					
-//					if(in_array($r['tag_id'], $brandTagId)){
-//						$res[$i]['brandtag_id'] = $r['tag_id'];
-//					}
-//
-//					if($r['tag_type']>0){
-//						$res[$i]['tag'][$r['tag_id']] = array("tagtype"=>$r['tag_type'], 
-//															  "tagtype_key"=>$r['tagtype_key'],
-//															  "tagname"=>$r['tag_name'],
-//															  "tagorder"=>$r['tag_order'],
-//															  "tagid"=>$r['tag_id'],
-//															  );
-//					}
+					}					
 				}
 				if(!empty($sizeHash)){
 					usort($sizeHash, array('Master', 'sort_size'));
@@ -1015,7 +989,6 @@ class Master{
 			
 			if ($l>0) {
 				if ($mode!='tag') {
-//					array_push($tag, $id);
 					$tag[] = $id;
 				} else {
 					array_unshift($tag, $id);
@@ -1697,6 +1670,52 @@ class Master{
 		return $curdate;
 	}
 	
+
+	/**
+	 * アイテムが属するカテゴリのIDを返す
+	 *
+	 * @param int $item_id
+	 * @return int|null
+	 */
+	private function getCategoryId($item_id)
+	{
+		try{
+			$conn = db_connect();
+			$sql = sprintf('select category_id from item inner join catalog on item.id = catalog.item_id where item.id = %d limit 1', $item_id);
+			$result = exe_sql($conn, $sql);
+			$rec = mysqli_fetch_array($result);
+			if (empty($rec)) throw new Exception();
+			$rs = $rec['category_id'];
+		}catch(Exception $e){
+			$rs= null;
+		}
+
+		mysqli_close($conn);
+		return $rs;
+	}
+
+	/**
+	 * 一般向け商品単価の掛け率を返す
+	 *
+	 * @param  float  $category_id
+	 * @@param  string  $curdate
+	 * @return array
+	 */
+	private function getMargin($category_id, $curdate)
+	{
+		$margin = [];
+		$curdate = $this->validdate($curdate);
+
+		// 2021-01-28 から掛け率2.0を適用
+		if (strtotime($curdate) >= strtotime(_APPLY_EXTRA_MARGIN)){
+			// Tシャツとスウェットは2.0、その他は1.8
+			if ($category_id == 1 || $category_id == 2) {
+				$margin = [2.0, 1.8, 1.6, 1.5];
+			}
+		}
+
+		return $margin;
+	}
 	
 	
 	/**

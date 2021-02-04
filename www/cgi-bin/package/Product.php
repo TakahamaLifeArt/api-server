@@ -409,11 +409,26 @@ class Product {
 			}
 			
 			if($amount>149){
-				if($amount<300){
-					$margin = _MARGIN_1;
-				}else{
-					$margin = _MARGIN_2;
+				// 単価の掛け率
+				$category_id = $this->getCategoryId($id);
+				$marginPvt = $this->getMargin($category_id);
+
+				if (empty($marginPvt)) {
+					if($amount<300){
+						$margin = _MARGIN_1;
+					}else{
+						$margin = _MARGIN_2;
+					}
+				} else {
+					if ($amount < 300) {
+						$margin = $marginPvt[1];
+					} else if ($amount < 500) {
+						$margin = $marginPvt[2];
+					} else {
+						$margin = $marginPvt[3];
+					}
 				}
+
 				$query = "select size.id as sizeid, size_name as name, 
 				(case when color_id=59 then truncate(price_1 * ? * (1+".$tax.")+9,-1) else truncate(price_0 * ? * (1+".$tax.")+9,-1) end) as cost 
 				from ((catalog 
@@ -532,6 +547,47 @@ class Product {
 			}
 		}
 		return $res;
+	}
+
+	/**
+	 * アイテムが属するカテゴリのIDを返す
+	 *
+	 * @param int $item_id
+	 * @return int|null
+	 */
+	private function getCategoryId($item_id)
+	{
+		try{
+			$query = 'select category_id from item inner join catalog on item.id = catalog.item_id where item.id = ? limit 1';
+			$r = $this->_sql->prepared($query, "i", array($item_id));
+			if (empty($r)) throw new Exception();
+			$res = $r[0]['category_id'];
+		}catch(Exception $e){
+			$res= null;
+		}
+
+		return $res;
+	}
+
+	/**
+	 * 一般向け商品単価の掛け率を返す
+	 *
+	 * @param  float  $category_id
+	 * @return array
+	 */
+	private function getMargin($category_id)
+	{
+		$margin = [];
+
+		// 2021-01-28 から掛け率2.0を適用
+		if (strtotime($this->_curDate) >= strtotime(_APPLY_EXTRA_MARGIN)){
+			// Tシャツとスウェットは2.0、その他は1.8
+			if ($category_id == 1 || $category_id == 2) {
+				$margin = [2.0, 1.8, 1.6, 1.5];
+			}
+		}
+
+		return $margin;
 	}
 }
 ?>
